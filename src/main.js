@@ -18,7 +18,7 @@ async function boot() {
     previousTime = now;
 
     simulation.update(deltaTime);
-    renderer.render();
+    renderer.render(simulation.elapsedTime);
 
     requestAnimationFrame(frame);
   }

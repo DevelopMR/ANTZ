@@ -5,14 +5,13 @@ function createVector(x = 0, y = 0) {
 }
 
 export class Ant {
-  constructor({ id, position, rotation, movementProfile }) {
+  constructor({ id, position, movementProfile, visualProfile }) {
     this.id = id;
     this.position = createVector(position.x, position.y);
     this.velocity = createVector();
-    this.rotation = rotation;
-    this.angularVelocity = 0;
-
+    this.facing = visualProfile.facing;
     this.state = "alive";
+    this.visualState = visualProfile.state;
     this.attached = false;
     this.carryingFood = false;
     this.connectionIds = [];
@@ -26,16 +25,23 @@ export class Ant {
       outputCount: 2,
     });
 
-    // Phase 2 sensor sampling can populate this without altering movement ownership.
     this.sensorState = {
       samples: [],
     };
 
     this.movement = {
-      desiredTurn: 0,
+      desiredDirection: movementProfile.initialDirection,
       steeringNoiseTimer: movementProfile.initialNoiseTimer,
       steeringTarget: movementProfile.initialSteeringTarget,
       wanderStrength: movementProfile.wanderStrength,
+      groundY: movementProfile.groundY,
+      postureTimer: movementProfile.postureTimer,
+    };
+
+    this.visual = {
+      animationOffset: visualProfile.animationOffset,
+      legPhase: visualProfile.legPhase,
+      wiggleStrength: visualProfile.wiggleStrength,
     };
   }
 }

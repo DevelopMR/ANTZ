@@ -1,5 +1,5 @@
 import { Application, Container, Graphics } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
-import { WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
+import { SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
 import { AntView } from "./AntView.js";
 
 export class WorldRenderer {
@@ -27,13 +27,15 @@ export class WorldRenderer {
     this.app.stage.addChild(this.worldContainer);
 
     this.#drawWorldBackdrop();
+    this.#createGoalMarker();
     this.#createQueenMarker();
     this.#createAntViews();
   }
 
-  render() {
+  render(elapsedTime) {
+    this.antViews.sort((left, right) => left.ant.position.y - right.ant.position.y);
     for (const antView of this.antViews) {
-      antView.sync();
+      antView.sync(elapsedTime);
     }
   }
 
@@ -43,19 +45,37 @@ export class WorldRenderer {
 
   #drawWorldBackdrop() {
     const backdrop = new Graphics();
-    backdrop.beginFill(0xe3d0aa);
-    backdrop.drawRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    backdrop.beginFill(0xe8d8b8);
+    backdrop.drawRoundedRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 22);
     backdrop.endFill();
 
-    backdrop.lineStyle(2, 0xc0a06f, 0.25);
+    backdrop.lineStyle(2, 0xc89d62, 0.13);
     for (let x = 0; x <= WORLD_WIDTH; x += 128) {
       backdrop.moveTo(x, 0);
       backdrop.lineTo(x, WORLD_HEIGHT);
     }
-    for (let y = 0; y <= WORLD_HEIGHT; y += 128) {
+    for (let y = 0; y <= WORLD_HEIGHT; y += 96) {
       backdrop.moveTo(0, y);
       backdrop.lineTo(WORLD_WIDTH, y);
     }
+
+    backdrop.beginFill(0xd0ae79);
+    backdrop.drawRect(0, SIMULATION_TUNING.groundY + 10, WORLD_WIDTH, WORLD_HEIGHT - (SIMULATION_TUNING.groundY + 10));
+    backdrop.endFill();
+
+    backdrop.lineStyle(5, 0x8f6a3d, 0.85);
+    backdrop.moveTo(0, SIMULATION_TUNING.groundY + 8);
+    backdrop.lineTo(WORLD_WIDTH, SIMULATION_TUNING.groundY + 8);
+
+    backdrop.lineStyle(4, 0x9d7749, 0.8);
+    backdrop.moveTo(292, SIMULATION_TUNING.groundY + 8);
+    backdrop.lineTo(292, 470);
+    backdrop.moveTo(580, SIMULATION_TUNING.groundY + 8);
+    backdrop.lineTo(580, 360);
+    backdrop.moveTo(860, SIMULATION_TUNING.groundY + 8);
+    backdrop.lineTo(860, 250);
+    backdrop.moveTo(1092, SIMULATION_TUNING.groundY + 8);
+    backdrop.lineTo(1092, 182);
 
     this.worldContainer.addChild(backdrop);
   }
@@ -74,6 +94,24 @@ export class WorldRenderer {
     this.worldContainer.addChild(queenMarker);
   }
 
+  #createGoalMarker() {
+    const goalMarker = new Graphics();
+    goalMarker.lineStyle(3, 0xf9f1c8, 1);
+    goalMarker.beginFill(0x496c42);
+    goalMarker.drawRoundedRect(-24, -20, 48, 40, 10);
+    goalMarker.endFill();
+    goalMarker.moveTo(-12, 0);
+    goalMarker.lineTo(12, 0);
+    goalMarker.moveTo(0, -10);
+    goalMarker.lineTo(0, 10);
+    goalMarker.position.set(
+      this.simulation.goal.position.x,
+      this.simulation.goal.position.y
+    );
+
+    this.worldContainer.addChild(goalMarker);
+  }
+
   #createAntViews() {
     const antLayer = new Container();
     this.worldContainer.addChild(antLayer);
@@ -81,7 +119,7 @@ export class WorldRenderer {
     this.antViews = this.simulation.ants.map((ant) => {
       const antView = new AntView(ant, () => new Graphics());
       antLayer.addChild(antView.graphics);
-      antView.sync();
+      antView.sync(this.simulation.elapsedTime);
       return antView;
     });
   }

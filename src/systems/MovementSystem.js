@@ -1,29 +1,34 @@
-import { ANT_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
+import { ANT_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function wrapAngle(angle) {
-  while (angle > Math.PI) {
-    angle -= Math.PI * 2;
-  }
-  while (angle < -Math.PI) {
-    angle += Math.PI * 2;
-  }
-  return angle;
-}
-
 export class MovementSystem {
   constructor(random = Math.random) {
     this.random = random;
+    this.stateCycle = ["walking", "reaching", "walking", "grasping"];
   }
 
   update(ants, deltaTime) {
     for (const ant of ants) {
+      this.#updatePosture(ant, deltaTime);
       this.#updateSteeringIntent(ant, deltaTime);
       this.#integrateMotion(ant, deltaTime);
-      this.#containWithinWorld(ant, deltaTime);
+      this.#containWithinWorld(ant);
+    }
+  }
+
+  #updatePosture(ant, deltaTime) {
+    ant.movement.postureTimer -= deltaTime;
+
+    if (ant.movement.postureTimer <= 0) {
+      const nextIndex = Math.floor(this.random() * this.stateCycle.length);
+      ant.visualState = this.stateCycle[nextIndex];
+      ant.movement.postureTimer = this.#randomRange(
+        ANT_TUNING.postureDurationMin,
+        ANT_TUNING.postureDurationMax
+      );
     }
   }
 
@@ -41,63 +46,56 @@ export class MovementSystem {
       ) * ant.movement.wanderStrength;
     }
 
-    const steeringDelta = ant.movement.steeringTarget - ant.movement.desiredTurn;
-    ant.movement.desiredTurn += steeringDelta * Math.min(1, ANT_TUNING.steeringSmoothing * deltaTime);
+    if (ant.visualState === "walking") {
+      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.9 * deltaTime;
+    } else if (ant.visualState === "reaching") {
+      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.35 * deltaTime;
+    } else {
+      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.18 * deltaTime;
+    }
+
+    ant.movement.desiredDirection = clamp(ant.movement.desiredDirection, -1, 1);
+
+    if (Math.abs(ant.movement.desiredDirection) > 0.08) {
+      ant.facing = ant.movement.desiredDirection >= 0 ? 1 : -1;
+    }
   }
 
   #integrateMotion(ant, deltaTime) {
-    const desiredTurnRate =
-      ant.movement.desiredTurn *
-      ANT_TUNING.maxTurnRate *
-      ant.traits.turnResponsiveness;
+    const postureSpeedScale = ant.visualState === "walking"
+      ? 1
+      : ant.visualState === "reaching"
+        ? 0.2
+        : 0.05;
 
-    ant.angularVelocity += (desiredTurnRate - ant.angularVelocity) * Math.min(1, 5 * deltaTime);
-    ant.angularVelocity *= Math.pow(SIMULATION_TUNING.angularDamping, deltaTime * 60);
-    ant.rotation = wrapAngle(ant.rotation + ant.angularVelocity * deltaTime);
+    const forwardForce =
+      ANT_TUNING.forwardDrive *
+      ant.traits.forwardBias *
+      ant.movement.desiredDirection *
+      postureSpeedScale;
 
-    const forwardForce = ANT_TUNING.forwardDrive * ant.traits.forwardBias;
-    ant.velocity.x += Math.cos(ant.rotation) * forwardForce * deltaTime;
-    ant.velocity.y += Math.sin(ant.rotation) * forwardForce * deltaTime;
+    ant.velocity.x += forwardForce * deltaTime;
+    ant.velocity.x *= Math.pow(SIMULATION_TUNING.linearDamping, deltaTime * 60);
+    ant.velocity.y = 0;
 
-    const damping = Math.pow(SIMULATION_TUNING.linearDamping, deltaTime * 60);
-    ant.velocity.x *= damping;
-    ant.velocity.y *= damping;
-
-    const speed = Math.hypot(ant.velocity.x, ant.velocity.y);
-    if (speed > ANT_TUNING.maxSpeed) {
-      const scale = ANT_TUNING.maxSpeed / speed;
-      ant.velocity.x *= scale;
-      ant.velocity.y *= scale;
-    }
-
+    ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.maxSpeed, ANT_TUNING.maxSpeed);
     ant.position.x += ant.velocity.x * deltaTime;
-    ant.position.y += ant.velocity.y * deltaTime;
+    ant.position.y = ant.movement.groundY;
   }
 
-  #containWithinWorld(ant, deltaTime) {
-    const margin = SIMULATION_TUNING.boundaryMargin;
+  #containWithinWorld(ant) {
+    const minX = 24;
+    const maxX = WORLD_WIDTH - 24;
 
-    let targetHeading = null;
-    if (ant.position.x < margin) {
-      targetHeading = 0;
-    } else if (ant.position.x > WORLD_WIDTH - margin) {
-      targetHeading = Math.PI;
+    if (ant.position.x <= minX) {
+      ant.position.x = minX;
+      ant.movement.desiredDirection = Math.abs(ant.movement.desiredDirection) || 0.6;
+      ant.facing = 1;
+    } else if (ant.position.x >= maxX) {
+      ant.position.x = maxX;
+      ant.movement.desiredDirection = -Math.abs(ant.movement.desiredDirection || 0.6);
+      ant.facing = -1;
     }
-
-    if (ant.position.y < margin) {
-      targetHeading = Math.PI / 2;
-    } else if (ant.position.y > WORLD_HEIGHT - margin) {
-      targetHeading = -Math.PI / 2;
-    }
-
-    if (targetHeading !== null) {
-      const headingDelta = wrapAngle(targetHeading - ant.rotation);
-      ant.movement.desiredTurn += headingDelta * SIMULATION_TUNING.boundaryTurnStrength * deltaTime;
-      ant.movement.desiredTurn = clamp(ant.movement.desiredTurn, -1, 1);
-    }
-
-    ant.position.x = clamp(ant.position.x, 8, WORLD_WIDTH - 8);
-    ant.position.y = clamp(ant.position.y, 8, WORLD_HEIGHT - 8);
   }
 
   #randomRange(min, max) {
