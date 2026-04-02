@@ -1,7 +1,7 @@
-import { Texture } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
+import { BaseTexture, Rectangle, Texture } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
 import { ANT_TUNING } from "../config/tuning.js";
 
-function createCanvas() {
+function createFrameCanvas() {
   const canvas = document.createElement("canvas");
   canvas.width = ANT_TUNING.spriteWidth;
   canvas.height = ANT_TUNING.spriteHeight;
@@ -70,89 +70,81 @@ function drawSideAntennae(ctx, spread = 0, headLift = 0) {
   drawLine(ctx, 12.0, 23.0 - headLift, 4.8, 21.1 + spread * 0.18 - headLift * 0.5, 1.35);
 }
 
-function makeStandingFrame(rock) {
-  const canvas = createCanvas();
+function renderFrame(drawFn) {
+  const canvas = createFrameCanvas();
   const ctx = canvas.getContext("2d");
   setupContext(ctx);
+  drawFn(ctx);
+  return canvas;
+}
 
-  drawSideBody(ctx, rock * 0.45, 0.035 + rock * 0.01, 0.18 + rock * 0.12);
-  drawSideAntennae(ctx, rock * 0.4, 0.18 + rock * 0.12);
+function makeStandingFrame(rock) {
+  return renderFrame((ctx) => {
+    drawSideBody(ctx, rock * 0.45, 0.035 + rock * 0.01, 0.18 + rock * 0.12);
+    drawSideAntennae(ctx, rock * 0.4, 0.18 + rock * 0.12);
 
-  drawLine(ctx, 21.2, 27.7, 18.1, 38.0 + rock * 0.2, 1.55);
-  drawLine(ctx, 26.3, 27.5, 25.8, 39.0 - rock * 0.15, 1.55);
-  drawLine(ctx, 33.5, 27.8, 39.1, 38.0 + rock * 0.22, 1.55);
-  drawLine(ctx, 24.0, 27.5, 21.2, 38.6 - rock * 0.15, 1.45);
-  drawLine(ctx, 29.3, 27.5, 29.7, 39.2 + rock * 0.08, 1.45);
-  drawLine(ctx, 36.2, 27.6, 45.0, 38.0 - rock * 0.18, 1.45);
-
-  return Texture.from(canvas);
+    drawLine(ctx, 21.2, 27.7, 18.1, 38.0 + rock * 0.2, 1.55);
+    drawLine(ctx, 26.3, 27.5, 25.8, 39.0 - rock * 0.15, 1.55);
+    drawLine(ctx, 33.5, 27.8, 39.1, 38.0 + rock * 0.22, 1.55);
+    drawLine(ctx, 24.0, 27.5, 21.2, 38.6 - rock * 0.15, 1.45);
+    drawLine(ctx, 29.3, 27.5, 29.7, 39.2 + rock * 0.08, 1.45);
+    drawLine(ctx, 36.2, 27.6, 45.0, 38.0 - rock * 0.18, 1.45);
+  });
 }
 
 function makeWalkingFrame(step) {
-  const canvas = createCanvas();
-  const ctx = canvas.getContext("2d");
-  setupContext(ctx);
+  return renderFrame((ctx) => {
+    drawSideBody(ctx, 0.15, 0.045, 0);
+    drawSideAntennae(ctx, step * 0.16, 0);
 
-  drawSideBody(ctx, 0.15, 0.045, 0);
-  drawSideAntennae(ctx, step * 0.16, 0);
-
-  drawLine(ctx, 20.7, 27.6, 16.4, 37.8 + step * 0.82, 1.55);
-  drawLine(ctx, 26.0, 27.7, 24.4, 39.7 - step * 0.6, 1.55);
-  drawLine(ctx, 33.2, 27.6, 40.1, 37.6 + step * 0.75, 1.55);
-  drawLine(ctx, 23.4, 27.6, 19.2, 38.7 - step * 0.62, 1.45);
-  drawLine(ctx, 29.5, 27.6, 29.8, 39.7 + step * 0.42, 1.45);
-  drawLine(ctx, 36.5, 27.6, 46.3, 38.0 - step * 0.78, 1.45);
-
-  return Texture.from(canvas);
+    drawLine(ctx, 20.7, 27.6, 16.4, 37.8 + step * 0.82, 1.55);
+    drawLine(ctx, 26.0, 27.7, 24.4, 39.7 - step * 0.6, 1.55);
+    drawLine(ctx, 33.2, 27.6, 40.1, 37.6 + step * 0.75, 1.55);
+    drawLine(ctx, 23.4, 27.6, 19.2, 38.7 - step * 0.62, 1.45);
+    drawLine(ctx, 29.5, 27.6, 29.8, 39.7 + step * 0.42, 1.45);
+    drawLine(ctx, 36.5, 27.6, 46.3, 38.0 - step * 0.78, 1.45);
+  });
 }
 
 function makeReachingFrame(reach) {
-  const canvas = createCanvas();
-  const ctx = canvas.getContext("2d");
-  setupContext(ctx);
+  return renderFrame((ctx) => {
+    const headLift = 4.2 + reach * 1.0;
+    drawSideBody(ctx, 1.1, 0.03, headLift);
+    drawSideAntennae(ctx, reach * 0.25, headLift + 0.2);
 
-  const headLift = 4.2 + reach * 1.0;
-  drawSideBody(ctx, 1.1, 0.03, headLift);
-  drawSideAntennae(ctx, reach * 0.25, headLift + 0.2);
+    drawLine(ctx, 18.6, 20.6 - headLift * 0.82, 10.0, 10.0 - reach * 2.35 - headLift * 0.8, 1.55);
+    drawLine(ctx, 22.8, 19.0 - headLift * 0.72, 16.0, 4.8 - reach * 1.85 - headLift * 0.88, 1.55);
 
-  drawLine(ctx, 18.6, 20.6 - headLift * 0.82, 10.0, 10.0 - reach * 2.35 - headLift * 0.8, 1.55);
-  drawLine(ctx, 22.8, 19.0 - headLift * 0.72, 16.0, 4.8 - reach * 1.85 - headLift * 0.88, 1.55);
-
-  drawLine(ctx, 24.8, 27.9, 21.4, 39.6, 1.55);
-  drawLine(ctx, 29.9, 27.9, 29.5, 40.0, 1.55);
-  drawLine(ctx, 34.0, 27.7, 38.7, 38.5, 1.45);
-  drawLine(ctx, 37.2, 27.4, 46.4, 35.2 + reach * 0.22, 1.45);
-
-  return Texture.from(canvas);
+    drawLine(ctx, 24.8, 27.9, 21.4, 39.6, 1.55);
+    drawLine(ctx, 29.9, 27.9, 29.5, 40.0, 1.55);
+    drawLine(ctx, 34.0, 27.7, 38.7, 38.5, 1.45);
+    drawLine(ctx, 37.2, 27.4, 46.4, 35.2 + reach * 0.22, 1.45);
+  });
 }
 
 function makeGraspingFrame(tension) {
-  const canvas = createCanvas();
-  const ctx = canvas.getContext("2d");
-  setupContext(ctx);
+  return renderFrame((ctx) => {
+    const head = { x: 28, y: 11.6, rx: 5.8, ry: 5.15, rot: 0 };
+    const thorax = { x: 28, y: 24.7, rx: 5.8, ry: 5.25, rot: 0 };
+    const abdomen = { x: 28, y: 39.6, rx: 7.4, ry: 11.3, rot: 0 };
+    drawEllipse(ctx, abdomen.x, abdomen.y, abdomen.rx, abdomen.ry);
+    drawEllipse(ctx, thorax.x, thorax.y, thorax.rx, thorax.ry);
+    drawEllipse(ctx, head.x, head.y, head.rx, head.ry);
+    drawBodyHighlight(ctx, head, thorax, abdomen);
 
-  const head = { x: 28, y: 11.6, rx: 5.8, ry: 5.15, rot: 0 };
-  const thorax = { x: 28, y: 24.7, rx: 5.8, ry: 5.25, rot: 0 };
-  const abdomen = { x: 28, y: 39.6, rx: 7.4, ry: 11.3, rot: 0 };
-  drawEllipse(ctx, abdomen.x, abdomen.y, abdomen.rx, abdomen.ry);
-  drawEllipse(ctx, thorax.x, thorax.y, thorax.rx, thorax.ry);
-  drawEllipse(ctx, head.x, head.y, head.rx, head.ry);
-  drawBodyHighlight(ctx, head, thorax, abdomen);
+    drawLine(ctx, 25.9, 7.4, 19.2, 2.8 - tension * 0.7, 1.35);
+    drawLine(ctx, 30.1, 7.4, 36.8, 2.8 - tension * 0.7, 1.35);
 
-  drawLine(ctx, 25.9, 7.4, 19.2, 2.8 - tension * 0.7, 1.35);
-  drawLine(ctx, 30.1, 7.4, 36.8, 2.8 - tension * 0.7, 1.35);
-
-  drawLine(ctx, 28.0, 22.8, 12.2, 15.7 + tension, 1.55);
-  drawLine(ctx, 28.0, 22.8, 43.8, 15.7 + tension, 1.55);
-  drawLine(ctx, 28.0, 26.0, 9.8, 29.6 - tension * 0.75, 1.55);
-  drawLine(ctx, 28.0, 26.0, 46.2, 29.6 - tension * 0.75, 1.55);
-  drawLine(ctx, 27.3, 31.3, 15.0, 48.0 + tension * 0.85, 1.55);
-  drawLine(ctx, 28.7, 31.3, 41.0, 48.0 + tension * 0.85, 1.55);
-
-  return Texture.from(canvas);
+    drawLine(ctx, 28.0, 22.8, 12.2, 15.7 + tension, 1.55);
+    drawLine(ctx, 28.0, 22.8, 43.8, 15.7 + tension, 1.55);
+    drawLine(ctx, 28.0, 26.0, 9.8, 29.6 - tension * 0.75, 1.55);
+    drawLine(ctx, 28.0, 26.0, 46.2, 29.6 - tension * 0.75, 1.55);
+    drawLine(ctx, 27.3, 31.3, 15.0, 48.0 + tension * 0.85, 1.55);
+    drawLine(ctx, 28.7, 31.3, 41.0, 48.0 + tension * 0.85, 1.55);
+  });
 }
 
-export function createAntSpriteLibrary() {
+function buildFrames() {
   return {
     standing: [
       makeStandingFrame(-0.75),
@@ -177,4 +169,49 @@ export function createAntSpriteLibrary() {
       makeGraspingFrame(0.55),
     ],
   };
+}
+
+function flattenFrames(frameMap) {
+  const entries = [];
+  for (const [state, frames] of Object.entries(frameMap)) {
+    for (const frame of frames) {
+      entries.push({ state, frame });
+    }
+  }
+  return entries;
+}
+
+export function createAntSpriteLibrary() {
+  const frameMap = buildFrames();
+  const frameEntries = flattenFrames(frameMap);
+  const atlasCanvas = document.createElement("canvas");
+  atlasCanvas.width = ANT_TUNING.spriteWidth * frameEntries.length;
+  atlasCanvas.height = ANT_TUNING.spriteHeight;
+
+  const atlasContext = atlasCanvas.getContext("2d");
+  frameEntries.forEach((entry, index) => {
+    atlasContext.drawImage(entry.frame, index * ANT_TUNING.spriteWidth, 0);
+  });
+
+  const baseTexture = BaseTexture.from(atlasCanvas);
+  const spriteLibrary = {};
+  let frameIndex = 0;
+
+  for (const [state, frames] of Object.entries(frameMap)) {
+    spriteLibrary[state] = frames.map(() => {
+      const texture = new Texture(
+        baseTexture,
+        new Rectangle(
+          frameIndex * ANT_TUNING.spriteWidth,
+          0,
+          ANT_TUNING.spriteWidth,
+          ANT_TUNING.spriteHeight
+        )
+      );
+      frameIndex += 1;
+      return texture;
+    });
+  }
+
+  return spriteLibrary;
 }

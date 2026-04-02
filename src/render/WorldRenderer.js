@@ -1,4 +1,4 @@
-import { Application, Container, Graphics } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
+import { Application, Container, Graphics, ParticleContainer } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
 import { SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
@@ -15,9 +15,9 @@ export class WorldRenderer {
     this.app = new Application({
       width: WORLD_WIDTH,
       height: WORLD_HEIGHT,
-      antialias: true,
+      antialias: false,
       backgroundAlpha: 0,
-      resolution: window.devicePixelRatio || 1,
+      resolution: 1,
       autoDensity: true,
     });
 
@@ -115,7 +115,11 @@ export class WorldRenderer {
   }
 
   #createAntViews() {
-    const antLayer = new Container();
+    const antLayer = new ParticleContainer(this.simulation.ants.length, {
+      position: true,
+      scale: true,
+      uvs: true,
+    });
     this.worldContainer.addChild(antLayer);
 
     this.antViews = this.simulation.ants.map((ant) => {

@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 40,
+  antCount: 100,
   spawnWidth: 220,
   fixedTimeStep: 1 / 60,
   maxDeltaTime: 1 / 20,
@@ -32,6 +32,7 @@ export const ANT_TUNING = {
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
   visualStateCycle: ["standing", "walking", "reaching", "walking", "grasping"],
+  animationTickRate: 12,
   animationFps: {
     standing: 2.4,
     walking: 7.5,
