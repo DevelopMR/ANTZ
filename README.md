@@ -6,20 +6,22 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project is currently in an early prototype stage around Phase 1 / Phase 1.5:
+The project is currently in an early prototype stage around Phase 2:
 - side-view ant presentation
 - lower-left colony spawn area
 - ground-bound ant movement prototype
 - multiple ant visual states
 - PixiJS rendering with a sprite-atlas ant pipeline
-- benchmark controls for comparing animated vs static ants
+- side-view obstacle map with walls, pegs, and early food nodes
+- 360-degree local sensor rays grouped into wedges
+- sensor debug visualization for a tracked ant
+- basic sensor-driven steering demo code
 
 Not implemented yet:
-- sensors
 - neural control
 - attachment mechanics
-- structural physics
-- food interaction
+- structural physics and climbing behavior
+- food pickup / carry-return loop
 - rewards / reproduction
 - pheromones
 - death / recycling
@@ -55,17 +57,19 @@ Then open:
 http://localhost:8000
 ```
 
-## Benchmark Panel
+## Current Prototype Notes
 
-The current prototype includes a small benchmark panel in the browser so render cost can be compared visually.
+The current build intentionally avoids global map knowledge for the ants.
 
-Current controls:
-- animated vs static ants
-- running vs paused simulation
-- single-step simulation advance
-- live FPS and frame-time readout
+Ant perception is being shaped around local-only inputs such as:
+- 360-degree vision rays / wedges
+- nearest obstacle distance per wedge
+- averaged color sampling per wedge
+- food scent sampling
+- future pheromone channels
+- small scalar body-state inputs
 
-This is intended to help evaluate render-path decisions while the prototype is still small.
+This keeps the project aligned with the long-term goal of embodied agent behavior rather than scripted waypoint logic.
 
 ## Project Structure
 
@@ -81,6 +85,8 @@ src/
 Key current files:
 - `src/systems/SimulationController.js`
 - `src/systems/MovementSystem.js`
+- `src/systems/MapSystem.js`
+- `src/systems/SensorSystem.js`
 - `src/render/WorldRenderer.js`
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`

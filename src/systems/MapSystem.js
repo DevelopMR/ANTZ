@@ -1,4 +1,4 @@
-import { ANT_TUNING, MAP_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
+import { ANT_TUNING, MAP_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
 
 function makeWall(id, x, y, width, height) {
   return {
@@ -115,7 +115,7 @@ export class MapSystem {
     };
 
     this.walls = [
-      makeWall("wall-0", 276, 468, 26, this.ground.y - 468),
+      makeWall("wall-0", 276, 500, 26, this.ground.y - 500),
       makeWall("wall-1", 544, 360, 28, this.ground.y - 360),
       makeWall("wall-2", 840, 246, 26, this.ground.y - 246),
       makeWall("wall-3", 1082, 182, 24, this.ground.y - 182),
@@ -123,13 +123,13 @@ export class MapSystem {
     ];
 
     this.pegs = [
-      makePeg("peg-0", 372, 428, 16),
+      makePeg("peg-0", 372, 452, 16),
       makePeg("peg-1", 668, 332, 18),
       makePeg("peg-2", 950, 228, 19),
     ];
 
     this.foodNodes = [
-      makeFood("food-0", 372, 400, 10),
+      makeFood("food-0", 372, 424, 10),
       makeFood("food-1", 668, 302, 10),
       makeFood("food-2", 950, 198, 10),
       makeFood("food-3", 208, this.ground.y - 18, 9),

@@ -45,7 +45,7 @@ export const ANT_TUNING = {
 export const SENSOR_TUNING = {
   wedgeCount: 6,
   raysPerWedge: 2,
-  maxDistance: 180,
+  maxDistance: 110,
   debugAntIndex: 0,
   wedgeCenters: [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3],
   wedgeNames: ["front", "front_up", "back_up", "back", "back_down", "front_down"],
