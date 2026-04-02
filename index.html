@@ -11,6 +11,9 @@
       --hud-bg: rgba(32, 24, 12, 0.82);
       --hud-text: #f4ead3;
       --accent: #9b2d20;
+      --accent-soft: #ffd6a1;
+      --input-bg: rgba(255, 245, 224, 0.08);
+      --input-border: rgba(255, 244, 214, 0.18);
     }
 
     * {
@@ -32,25 +35,98 @@
       height: 100vh;
     }
 
-    .hud {
+    .hud,
+    .perf-panel {
       position: fixed;
-      top: 16px;
-      left: 16px;
       padding: 10px 14px;
       border: 1px solid rgba(255, 244, 214, 0.15);
       border-radius: 12px;
       background: var(--hud-bg);
       color: var(--hud-text);
       backdrop-filter: blur(10px);
+    }
+
+    .hud {
+      top: 16px;
+      left: 16px;
       pointer-events: none;
     }
 
-    .hud strong {
+    .hud strong,
+    .perf-panel strong {
       color: #fff5da;
     }
 
-    .hud__accent {
-      color: #ffd6a1;
+    .hud__accent,
+    .perf-panel__accent {
+      color: var(--accent-soft);
+    }
+
+    .perf-panel {
+      top: 16px;
+      right: 16px;
+      width: 280px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .perf-panel__row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .perf-panel__controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .perf-panel label {
+      font-size: 13px;
+      color: #f6e5bf;
+    }
+
+    .perf-panel select,
+    .perf-panel button {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--hud-text);
+      font: inherit;
+    }
+
+    .perf-panel button {
+      cursor: pointer;
+    }
+
+    .perf-panel button:hover,
+    .perf-panel select:hover {
+      border-color: rgba(255, 236, 184, 0.38);
+    }
+
+    .perf-panel__stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 12px;
+      font-size: 13px;
+    }
+
+    .perf-panel__stats span:nth-child(odd) {
+      color: #e6d2a5;
+    }
+
+    .perf-panel__stats span:nth-child(even) {
+      text-align: right;
+      color: #fff3d7;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .perf-panel__hint {
+      font-size: 12px;
+      line-height: 1.35;
+      color: #d9c7a3;
     }
   </style>
 </head>
@@ -58,8 +134,43 @@
   <div id="app"></div>
   <div class="hud">
     <strong>Ant Sim</strong>
-    <div class="hud__accent">Phase 1: Core Movement Prototype</div>
+    <div class="hud__accent">Phase 1.5 Performance Testbed</div>
   </div>
+  <aside class="perf-panel">
+    <div>
+      <strong>Benchmark Panel</strong>
+      <div class="perf-panel__accent">Visual compare: animated vs static ants</div>
+    </div>
+    <div class="perf-panel__row">
+      <label for="animation-mode">Ant Animation</label>
+      <select id="animation-mode">
+        <option value="animated">Animated</option>
+        <option value="static">Static</option>
+      </select>
+    </div>
+    <div class="perf-panel__row">
+      <label for="simulation-mode">Simulation</label>
+      <select id="simulation-mode">
+        <option value="running">Running</option>
+        <option value="paused">Paused</option>
+      </select>
+    </div>
+    <div class="perf-panel__controls">
+      <button id="step-button" type="button">Step Once</button>
+      <button id="reset-metrics" type="button">Reset Metrics</button>
+    </div>
+    <div class="perf-panel__stats">
+      <span>FPS</span><span id="stat-fps">0</span>
+      <span>Frame ms</span><span id="stat-frame-ms">0.00</span>
+      <span>Render mode</span><span id="stat-animation-mode">Animated</span>
+      <span>Sim mode</span><span id="stat-sim-mode">Running</span>
+      <span>Ants</span><span id="stat-ant-count">0</span>
+      <span>Sample window</span><span id="stat-sample-window">0.0s</span>
+    </div>
+    <div class="perf-panel__hint">
+      Compare animated vs static with the same ant count. Pause and step to isolate rendering from movement.
+    </div>
+  </aside>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

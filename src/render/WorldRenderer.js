@@ -35,9 +35,9 @@ export class WorldRenderer {
     this.#createAntViews();
   }
 
-  render(elapsedTime) {
+  render(elapsedTime, renderSettings) {
     for (const antView of this.antViews) {
-      antView.sync(elapsedTime);
+      antView.sync(elapsedTime, renderSettings);
     }
   }
 
@@ -125,7 +125,7 @@ export class WorldRenderer {
     this.antViews = this.simulation.ants.map((ant) => {
       const antView = new AntView(ant, this.antSpriteLibrary);
       antLayer.addChild(antView.sprite);
-      antView.sync(this.simulation.elapsedTime);
+      antView.sync(this.simulation.elapsedTime, { animationMode: "animated" });
       return antView;
     });
   }

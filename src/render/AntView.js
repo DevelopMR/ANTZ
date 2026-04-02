@@ -14,9 +14,10 @@ export class AntView {
     this.lastFacing = null;
     this.lastAnimationTick = -1;
     this.lastState = null;
+    this.lastAnimationMode = null;
   }
 
-  sync(elapsedTime) {
+  sync(elapsedTime, renderSettings = { animationMode: "animated" }) {
     if (this.ant.position.x !== this.lastX || this.ant.position.y !== this.lastY) {
       this.sprite.position.set(this.ant.position.x, this.ant.position.y);
       this.lastX = this.ant.position.x;
@@ -28,17 +29,33 @@ export class AntView {
       this.lastFacing = this.ant.facing;
     }
 
-    const animationTick = Math.floor(elapsedTime * ANT_TUNING.animationTickRate);
-    if (animationTick === this.lastAnimationTick && this.ant.visualState === this.lastState) {
+    const animationMode = renderSettings.animationMode || "animated";
+    const animationTick = animationMode === "animated"
+      ? Math.floor(elapsedTime * ANT_TUNING.animationTickRate)
+      : -1;
+
+    if (
+      animationTick === this.lastAnimationTick &&
+      this.ant.visualState === this.lastState &&
+      animationMode === this.lastAnimationMode
+    ) {
       return;
     }
 
     const frames = this.spriteLibrary[this.ant.visualState];
-    const fps = ANT_TUNING.animationFps[this.ant.visualState] || 1;
-    const frameProgress = animationTick * (fps / ANT_TUNING.animationTickRate);
-    const frameIndex = Math.floor(frameProgress + this.ant.visual.animationOffset * frames.length + this.ant.visual.frameSeed) % frames.length;
-    const texture = frames[frameIndex];
+    let frameIndex;
 
+    if (animationMode === "static") {
+      frameIndex = Math.floor(frames.length / 2);
+    } else {
+      const fps = ANT_TUNING.animationFps[this.ant.visualState] || 1;
+      const frameProgress = animationTick * (fps / ANT_TUNING.animationTickRate);
+      frameIndex = Math.floor(
+        frameProgress + this.ant.visual.animationOffset * frames.length + this.ant.visual.frameSeed
+      ) % frames.length;
+    }
+
+    const texture = frames[frameIndex];
     if (texture !== this.currentTexture) {
       this.sprite.texture = texture;
       this.currentTexture = texture;
@@ -46,5 +63,6 @@ export class AntView {
 
     this.lastAnimationTick = animationTick;
     this.lastState = this.ant.visualState;
+    this.lastAnimationMode = animationMode;
   }
 }
