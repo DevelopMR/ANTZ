@@ -4,7 +4,7 @@ export const WORLD_HEIGHT = 720;
 export const SIMULATION_TUNING = {
   antCount: 40,
   spawnWidth: 220,
-  fixedTimeStep: 1 / 60,
+  fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
   linearDamping: 0.82,
   boundaryMargin: 48,
@@ -31,6 +31,7 @@ export const ANT_TUNING = {
   steeringImpulseMax: 1,
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
+  collisionRadius: 11,
   visualStateCycle: ["standing", "walking", "reaching", "walking", "grasping"],
   animationTickRate: 12,
   animationFps: {
@@ -39,4 +40,21 @@ export const ANT_TUNING = {
     reaching: 4.2,
     grasping: 2.2,
   },
+};
+
+export const SENSOR_TUNING = {
+  wedgeCount: 6,
+  raysPerWedge: 2,
+  maxDistance: 180,
+  debugAntIndex: 0,
+  wedgeCenters: [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3],
+  wedgeNames: ["front", "front_up", "back_up", "back", "back_down", "front_down"],
+  scentRange: 280,
+};
+
+export const MAP_TUNING = {
+  groundColor: 0xd0ae79,
+  wallColor: 0x9d7749,
+  pegColor: 0x7a5632,
+  foodColor: 0x4f8a3b,
 };

@@ -1,3 +1,5 @@
+import { MapSystem } from "./MapSystem.js";
+import { SensorSystem } from "./SensorSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
 import { ANT_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
@@ -10,6 +12,8 @@ function randomRange(random, min, max) {
 export class SimulationController {
   constructor({ random = Math.random } = {}) {
     this.random = random;
+    this.mapSystem = new MapSystem();
+    this.sensorSystem = new SensorSystem();
     this.movementSystem = new MovementSystem(random);
     this.accumulator = 0;
     this.elapsedTime = 0;
@@ -20,6 +24,7 @@ export class SimulationController {
     };
 
     this.#spawnAnts();
+    this.sensorSystem.update(this.ants, this.mapSystem);
   }
 
   update(deltaTime) {
@@ -28,7 +33,8 @@ export class SimulationController {
     this.elapsedTime += safeDelta;
 
     while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
-      this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep);
+      this.sensorSystem.update(this.ants, this.mapSystem);
+      this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
     }
   }

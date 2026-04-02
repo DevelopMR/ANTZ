@@ -1,4 +1,5 @@
 import { NeuralNet } from "../ai/NeuralNet.js";
+import { SENSOR_TUNING } from "../config/tuning.js";
 
 function createVector(x = 0, y = 0) {
   return { x, y };
@@ -20,13 +21,19 @@ export class Ant {
       turnResponsiveness: movementProfile.turnResponsiveness,
     };
     this.brain = new NeuralNet({
-      inputCount: 0,
+      inputCount: SENSOR_TUNING.wedgeCount * 5 + 3,
       hiddenLayers: [],
       outputCount: 2,
     });
 
     this.sensorState = {
-      samples: [],
+      wedges: [],
+      rays: [],
+      scalars: {
+        speed: 0,
+        attached: 0,
+        connectionCount: 0,
+      },
     };
 
     this.movement = {

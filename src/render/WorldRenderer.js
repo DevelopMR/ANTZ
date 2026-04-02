@@ -1,7 +1,12 @@
 import { Application, Container, Graphics, ParticleContainer } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
-import { SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
+import { MAP_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
+
+function rgbToHex(color) {
+  const [r, g, b] = color.map((channel) => Math.max(0, Math.min(255, Math.round(channel * 255))));
+  return (r << 16) + (g << 8) + b;
+}
 
 export class WorldRenderer {
   constructor(simulation) {
@@ -10,6 +15,7 @@ export class WorldRenderer {
     this.app = null;
     this.antSpriteLibrary = null;
     this.antLayer = null;
+    this.sensorOverlay = null;
   }
 
   async initialize(container) {
@@ -31,15 +37,18 @@ export class WorldRenderer {
     this.antSpriteLibrary = createAntSpriteLibrary();
 
     this.#drawWorldBackdrop();
+    this.#drawMapGeometry();
     this.#createGoalMarker();
     this.#createQueenMarker();
     this.#createAntViews();
+    this.#createSensorOverlay();
   }
 
   render(elapsedTime) {
     for (const antView of this.antViews) {
       antView.sync(elapsedTime);
     }
+    this.#drawSensorDebug();
   }
 
   destroy() {
@@ -62,7 +71,7 @@ export class WorldRenderer {
       backdrop.lineTo(WORLD_WIDTH, y);
     }
 
-    backdrop.beginFill(0xd0ae79);
+    backdrop.beginFill(MAP_TUNING.groundColor);
     backdrop.drawRect(0, SIMULATION_TUNING.groundY + 10, WORLD_WIDTH, WORLD_HEIGHT - (SIMULATION_TUNING.groundY + 10));
     backdrop.endFill();
 
@@ -70,17 +79,69 @@ export class WorldRenderer {
     backdrop.moveTo(0, SIMULATION_TUNING.groundY + 8);
     backdrop.lineTo(WORLD_WIDTH, SIMULATION_TUNING.groundY + 8);
 
-    backdrop.lineStyle(4, 0x9d7749, 0.8);
-    backdrop.moveTo(292, SIMULATION_TUNING.groundY + 8);
-    backdrop.lineTo(292, 470);
-    backdrop.moveTo(580, SIMULATION_TUNING.groundY + 8);
-    backdrop.lineTo(580, 360);
-    backdrop.moveTo(860, SIMULATION_TUNING.groundY + 8);
-    backdrop.lineTo(860, 250);
-    backdrop.moveTo(1092, SIMULATION_TUNING.groundY + 8);
-    backdrop.lineTo(1092, 182);
-
     this.worldContainer.addChild(backdrop);
+  }
+
+  #drawMapGeometry() {
+    const { walls, pegs, foodNodes } = this.simulation.mapSystem.getRenderState();
+    const geometry = new Graphics();
+
+    for (const wall of walls) {
+      geometry.beginFill(wall.color);
+      geometry.drawRect(wall.x, wall.y, wall.width, wall.height);
+      geometry.endFill();
+    }
+
+    for (const peg of pegs) {
+      geometry.lineStyle(3, 0xf5d7a8, 0.55);
+      geometry.beginFill(peg.color);
+      geometry.drawCircle(peg.x, peg.y, peg.radius);
+      geometry.endFill();
+    }
+
+    for (const foodNode of foodNodes) {
+      geometry.lineStyle(2, 0xd7f2b8, 0.7);
+      geometry.beginFill(foodNode.color);
+      geometry.drawCircle(foodNode.x, foodNode.y, foodNode.radius);
+      geometry.endFill();
+    }
+
+    this.worldContainer.addChild(geometry);
+  }
+
+  #createSensorOverlay() {
+    this.sensorOverlay = new Graphics();
+    this.worldContainer.addChild(this.sensorOverlay);
+  }
+
+  #drawSensorDebug() {
+    const ant = this.simulation.ants[SENSOR_TUNING.debugAntIndex];
+    if (!ant || !ant.sensorState?.rays) {
+      return;
+    }
+
+    const g = this.sensorOverlay;
+    g.clear();
+
+    for (const ray of ant.sensorState.rays) {
+      const hitPoint = ray.hit
+        ? ray.hit.point
+        : {
+            x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
+            y: ant.position.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
+          };
+
+      const lineColor = ray.hit ? rgbToHex(ray.color) : 0x81725c;
+      g.lineStyle(1, lineColor, ray.hit ? 0.55 : 0.18);
+      g.moveTo(ant.position.x, ant.position.y - 10);
+      g.lineTo(hitPoint.x, hitPoint.y);
+
+      if (ray.hit) {
+        g.beginFill(lineColor, 0.8);
+        g.drawCircle(hitPoint.x, hitPoint.y, 2.2);
+        g.endFill();
+      }
+    }
   }
 
   #createQueenMarker() {
