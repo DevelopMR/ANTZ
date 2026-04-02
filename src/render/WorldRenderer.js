@@ -3,6 +3,8 @@ import { MAP_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
+const EMPTY_WEDGE_COLOR = 0x9e9a90;
+
 function sensorScalarToHex(value) {
   if (value >= 0.8) {
     return 0x5f9b42;
@@ -16,7 +18,7 @@ function sensorScalarToHex(value) {
   if (value > -1) {
     return 0x8f6a3d;
   }
-  return 0x81725c;
+  return EMPTY_WEDGE_COLOR;
 }
 
 export class WorldRenderer {
@@ -127,10 +129,11 @@ export class WorldRenderer {
 
   #drawSensorDebug() {
     const ant = this.simulation.ants[SENSOR_TUNING.debugAntIndex];
-    if (!ant || !ant.sensorState?.rays) {
+    if (!ant || !ant.sensorState?.rays || !ant.sensorState?.wedges) {
       return;
     }
 
+    const facingOffset = ant.facing > 0 ? 0 : Math.PI;
     const g = this.sensorOverlay;
     g.clear();
 
@@ -141,7 +144,7 @@ export class WorldRenderer {
             x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
             y: ant.position.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
           };
-      const lineColor = ray.hit ? sensorScalarToHex(ray.colorScalar) : 0x81725c;
+      const lineColor = ray.hit ? sensorScalarToHex(ray.colorScalar) : EMPTY_WEDGE_COLOR;
 
       g.lineStyle(1, lineColor, ray.hit ? 0.58 : 0.18);
       g.moveTo(ant.position.x, ant.position.y - 10);
@@ -152,6 +155,19 @@ export class WorldRenderer {
         g.drawCircle(endPoint.x, endPoint.y, 2.2);
         g.endFill();
       }
+    }
+
+    for (const wedge of ant.sensorState.wedges) {
+      const worldAngle = wedge.localAngle + facingOffset;
+      const dotRadius = SENSOR_TUNING.maxDistance - 8;
+      const dotX = ant.position.x + Math.cos(worldAngle) * dotRadius;
+      const dotY = ant.position.y - 10 + Math.sin(worldAngle) * dotRadius;
+      const dotColor = wedge.objectCount > 0 ? sensorScalarToHex(wedge.colorScalar) : EMPTY_WEDGE_COLOR;
+
+      g.lineStyle(1, 0xf2e6c8, 0.7);
+      g.beginFill(dotColor, 0.95);
+      g.drawCircle(dotX, dotY, 4.2);
+      g.endFill();
     }
   }
 
