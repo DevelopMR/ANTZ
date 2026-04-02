@@ -15,25 +15,22 @@ export class AntView {
     this.lastAnimationTick = -1;
     this.lastState = null;
     this.lastAnimationMode = null;
-    this.lastSizeProfile = null;
+    this.lastScale = null;
   }
 
-  sync(elapsedTime, renderSettings = { animationMode: "animated", sizeProfile: "original" }) {
+  sync(elapsedTime, renderSettings = { animationMode: "animated" }) {
     if (this.ant.position.x !== this.lastX || this.ant.position.y !== this.lastY) {
       this.sprite.position.set(this.ant.position.x, this.ant.position.y);
       this.lastX = this.ant.position.x;
       this.lastY = this.ant.position.y;
     }
 
-    const sizeProfile = renderSettings.sizeProfile || "original";
-    const sizeScale = sizeProfile === "compact"
-      ? this.ant.visualState === "grasping" ? 0.6 : 0.8
-      : 1;
+    const sizeScale = this.ant.visualState === "grasping" ? 0.5 : 0.8;
 
-    if (this.ant.facing !== this.lastFacing || sizeProfile !== this.lastSizeProfile) {
+    if (this.ant.facing !== this.lastFacing || sizeScale !== this.lastScale) {
       this.sprite.scale.set(-this.ant.facing * sizeScale, sizeScale);
       this.lastFacing = this.ant.facing;
-      this.lastSizeProfile = sizeProfile;
+      this.lastScale = sizeScale;
     }
 
     const animationMode = renderSettings.animationMode || "animated";

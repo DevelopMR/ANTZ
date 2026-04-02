@@ -193,13 +193,6 @@
           <option value="low">Low</option>
         </select>
       </div>
-      <div class="perf-panel__row">
-        <label for="size-profile">Ant Size Profile</label>
-        <select id="size-profile">
-          <option value="original">Original</option>
-          <option value="compact">80% / 60% grasping</option>
-        </select>
-      </div>
     </div>
     <div class="perf-panel__controls">
       <button id="respawn-button" type="button">Respawn</button>
@@ -218,10 +211,9 @@
       <span>Sim Hz</span><span id="stat-sim-hz">60</span>
       <span>Movement</span><span id="stat-movement-mode">Precompute</span>
       <span>Detail</span><span id="stat-detail-mode">Full</span>
-      <span>Size</span><span id="stat-size-mode">Original</span>
     </div>
     <div class="perf-panel__hint">
-      Use spread layout, lower sim frequency, simplified movement, low detail, and compact sizing to compare where the performance gains are really coming from.
+      Use spread layout, lower sim frequency, simplified movement, and low detail to compare where the performance gains are really coming from.
     </div>
   </aside>
   <script type="module" src="./src/main.js"></script>

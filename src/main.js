@@ -10,7 +10,6 @@ function createRuntimeSettings() {
     simulationHz: 60,
     movementMode: "precompute",
     behaviorDetail: "full",
-    sizeProfile: "original",
   };
 }
 
@@ -37,7 +36,6 @@ function bindControls(runtimeSettings, simulation, renderer, metrics) {
   const simulationHzSelect = document.querySelector("#simulation-hz");
   const movementModeSelect = document.querySelector("#movement-mode");
   const behaviorDetailSelect = document.querySelector("#behavior-detail");
-  const sizeProfileSelect = document.querySelector("#size-profile");
   const stepButton = document.querySelector("#step-button");
   const resetMetricsButton = document.querySelector("#reset-metrics");
   const respawnButton = document.querySelector("#respawn-button");
@@ -52,7 +50,6 @@ function bindControls(runtimeSettings, simulation, renderer, metrics) {
   const simHzStat = document.querySelector("#stat-sim-hz");
   const movementModeStat = document.querySelector("#stat-movement-mode");
   const detailModeStat = document.querySelector("#stat-detail-mode");
-  const sizeModeStat = document.querySelector("#stat-size-mode");
 
   function refreshAntCount() {
     antCountStat.textContent = String(simulation.ants.length);
@@ -70,7 +67,6 @@ function bindControls(runtimeSettings, simulation, renderer, metrics) {
   simulationHzSelect.value = String(runtimeSettings.simulationHz);
   movementModeSelect.value = runtimeSettings.movementMode;
   behaviorDetailSelect.value = runtimeSettings.behaviorDetail;
-  sizeProfileSelect.value = runtimeSettings.sizeProfile;
   refreshAntCount();
 
   animationSelect.addEventListener("change", () => {
@@ -97,10 +93,6 @@ function bindControls(runtimeSettings, simulation, renderer, metrics) {
     runtimeSettings.behaviorDetail = behaviorDetailSelect.value;
   });
 
-  sizeProfileSelect.addEventListener("change", () => {
-    runtimeSettings.sizeProfile = sizeProfileSelect.value;
-  });
-
   stepButton.addEventListener("click", () => {
     simulation.step(runtimeSettings);
   });
@@ -122,7 +114,6 @@ function bindControls(runtimeSettings, simulation, renderer, metrics) {
     simHzStat.textContent = `${runtimeSettings.simulationHz}`;
     movementModeStat.textContent = runtimeSettings.movementMode === "precompute" ? "Precompute" : "Simplify";
     detailModeStat.textContent = runtimeSettings.behaviorDetail === "full" ? "Full" : "Low";
-    sizeModeStat.textContent = runtimeSettings.sizeProfile === "compact" ? "Compact" : "Original";
   };
 }
 
