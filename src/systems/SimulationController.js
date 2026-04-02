@@ -24,7 +24,7 @@ export class SimulationController {
     };
 
     this.#spawnAnts();
-    this.sensorSystem.update(this.ants, this.mapSystem);
+    this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
   }
 
   update(deltaTime) {
@@ -33,7 +33,7 @@ export class SimulationController {
     this.elapsedTime += safeDelta;
 
     while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
-      this.sensorSystem.update(this.ants, this.mapSystem);
+      this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
       this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
     }

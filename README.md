@@ -12,8 +12,10 @@ The project is currently in an early prototype stage around Phase 2:
 - ground-bound ant movement prototype
 - multiple ant visual states
 - PixiJS rendering with a sprite-atlas ant pipeline
-- side-view obstacle map with walls, pegs, and early food nodes
-- 360-degree local sensor rays grouped into wedges
+- side-view obstacle map with walls, pegs, ground, queen, and early food nodes
+- 360-degree local sensing aggregated into 6 wedges
+- wedge outputs built from closest visible object distance plus averaged color-range scalar
+- local social sensing that includes nearby ants without global map knowledge
 - sensor debug visualization for a tracked ant
 - basic sensor-driven steering demo code
 
@@ -23,7 +25,7 @@ Not implemented yet:
 - structural physics and climbing behavior
 - food pickup / carry-return loop
 - rewards / reproduction
-- pheromones
+- pheromone map simulation
 - death / recycling
 
 ## Goals
@@ -61,15 +63,15 @@ http://localhost:8000
 
 The current build intentionally avoids global map knowledge for the ants.
 
-Ant perception is being shaped around local-only inputs such as:
-- 360-degree vision rays / wedges
-- nearest obstacle distance per wedge
-- averaged color sampling per wedge
-- food scent sampling
-- future pheromone channels
+Ant perception is currently being shaped around local-only inputs such as:
+- 6 wedges around local facing direction
+- closest visible-object proximity per wedge
+- averaged wedge color-range scalar using visible hits only
+- nondirectional local food scent scalar
+- nondirectional pheromone placeholder scalar
 - small scalar body-state inputs
 
-This keeps the project aligned with the long-term goal of embodied agent behavior rather than scripted waypoint logic.
+Static walls are the only vision occluders at the moment. Pegs, food, queen, and nearby ants all contribute to wedge color averaging when they fall into a visible wedge.
 
 ## Project Structure
 

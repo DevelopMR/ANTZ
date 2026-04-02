@@ -47,9 +47,19 @@ export const SENSOR_TUNING = {
   raysPerWedge: 2,
   maxDistance: 110,
   debugAntIndex: 0,
+  spatialHashCellSize: 96,
+  scalarInputCount: 5,
   wedgeCenters: [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3],
   wedgeNames: ["front", "front_up", "back_up", "back", "back_down", "front_down"],
-  scentRange: 280,
+  colorRange: {
+    obstacle: 0.15,
+    ant: 0.45,
+    queen: 0.72,
+    food: 1,
+  },
+  localFoodScentRange: 220,
+  antSenseRadius: 10,
+  queenSenseRadius: 20,
 };
 
 export const MAP_TUNING = {
@@ -57,4 +67,5 @@ export const MAP_TUNING = {
   wallColor: 0x9d7749,
   pegColor: 0x7a5632,
   foodColor: 0x4f8a3b,
+  queenColor: 0x8d2a1e,
 };

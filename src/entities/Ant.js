@@ -21,7 +21,7 @@ export class Ant {
       turnResponsiveness: movementProfile.turnResponsiveness,
     };
     this.brain = new NeuralNet({
-      inputCount: SENSOR_TUNING.wedgeCount * 5 + 3,
+      inputCount: SENSOR_TUNING.wedgeCount * 2 + SENSOR_TUNING.scalarInputCount,
       hiddenLayers: [],
       outputCount: 2,
     });
@@ -29,7 +29,12 @@ export class Ant {
     this.sensorState = {
       wedges: [],
       rays: [],
+      debug: {
+        visibleObjects: [],
+      },
       scalars: {
+        foodScent: 0,
+        pheromone: 0,
         speed: 0,
         attached: 0,
         connectionCount: 0,

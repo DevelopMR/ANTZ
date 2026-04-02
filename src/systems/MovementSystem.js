@@ -1,4 +1,4 @@
-import { ANT_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, SENSOR_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -54,17 +54,18 @@ export class MovementSystem {
     }
 
     const frontPressure = (wedges[0].proximity + wedges[1].proximity + wedges[5].proximity) / 3;
-    const leftOpen = (1 - wedges[1].proximity + 1 - wedges[2].proximity) * 0.5;
-    const rightOpen = (1 - wedges[5].proximity + 1 - wedges[4].proximity) * 0.5;
-    const leftFood = wedges[1].scent + wedges[2].scent;
-    const rightFood = wedges[5].scent + wedges[4].scent;
+    const leftOpen = ((1 - wedges[1].proximity) + (1 - wedges[2].proximity)) * 0.5;
+    const rightOpen = ((1 - wedges[5].proximity) + (1 - wedges[4].proximity)) * 0.5;
+    const leftSignal = ((wedges[1].colorScalar + wedges[2].colorScalar) * 0.5) - SENSOR_TUNING.colorRange.obstacle;
+    const rightSignal = ((wedges[5].colorScalar + wedges[4].colorScalar) * 0.5) - SENSOR_TUNING.colorRange.obstacle;
+    const scentBias = ant.sensorState.scalars.foodScent * 0.06 * ant.facing;
 
-    const opennessBias = (rightOpen - leftOpen) * 0.9;
-    const foodBias = (rightFood - leftFood) * 0.35;
-    const obstacleBrake = frontPressure * 1.25;
-    const noiseBias = ant.movement.steeringTarget * 0.12;
+    const opennessBias = (rightOpen - leftOpen) * 0.85;
+    const interestBias = (rightSignal - leftSignal) * 0.55;
+    const obstacleBrake = frontPressure * 1.2;
+    const noiseBias = ant.movement.steeringTarget * 0.11;
 
-    ant.movement.desiredDirection += (opennessBias + foodBias - obstacleBrake + noiseBias) * deltaTime;
+    ant.movement.desiredDirection += (opennessBias + interestBias + scentBias - obstacleBrake + noiseBias) * deltaTime;
     ant.movement.desiredDirection = clamp(ant.movement.desiredDirection, -1, 1);
 
     if (Math.abs(ant.movement.desiredDirection) > 0.05) {

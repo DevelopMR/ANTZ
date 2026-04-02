@@ -1,72 +1,158 @@
 import { SENSOR_TUNING } from "../config/tuning.js";
 
+const FULL_CIRCLE = Math.PI * 2;
+const HALF_WEDGE_SPAN = Math.PI / SENSOR_TUNING.wedgeCount;
+
 function normalizeAngle(angle) {
   while (angle < 0) {
-    angle += Math.PI * 2;
+    angle += FULL_CIRCLE;
   }
-  while (angle >= Math.PI * 2) {
-    angle -= Math.PI * 2;
+  while (angle >= FULL_CIRCLE) {
+    angle -= FULL_CIRCLE;
   }
   return angle;
 }
 
-export class SensorSystem {
-  update(ants, mapSystem) {
-    for (const ant of ants) {
-      this.#sampleAnt(ant, mapSystem);
+function shortestAngleDifference(a, b) {
+  let diff = normalizeAngle(a - b);
+  if (diff > Math.PI) {
+    diff -= FULL_CIRCLE;
+  }
+  return diff;
+}
+
+function getFacingOffset(ant) {
+  return ant.facing > 0 ? 0 : Math.PI;
+}
+
+function getWedgeIndex(localAngle) {
+  let bestIndex = 0;
+  let bestDifference = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < SENSOR_TUNING.wedgeCenters.length; index += 1) {
+    const difference = Math.abs(shortestAngleDifference(localAngle, SENSOR_TUNING.wedgeCenters[index]));
+    if (difference < bestDifference) {
+      bestDifference = difference;
+      bestIndex = index;
     }
   }
 
-  #sampleAnt(ant, mapSystem) {
-    const facingOffset = ant.facing > 0 ? 0 : Math.PI;
-    const rays = [];
-    const wedges = [];
+  return bestDifference <= HALF_WEDGE_SPAN + 0.001 ? bestIndex : null;
+}
 
-    for (let wedgeIndex = 0; wedgeIndex < SENSOR_TUNING.wedgeCount; wedgeIndex += 1) {
-      const wedgeCenter = SENSOR_TUNING.wedgeCenters[wedgeIndex];
-      const localAngles = [wedgeCenter - Math.PI / 12, wedgeCenter + Math.PI / 12];
-      const wedgeHits = [];
+export class SensorSystem {
+  update(ants, mapSystem, queen) {
+    const dynamicObjects = mapSystem.createDynamicSensorObjects(ants, queen);
+    const dynamicIndex = mapSystem.buildDynamicSensorIndex(dynamicObjects);
 
-      for (const localAngle of localAngles) {
-        const worldAngle = normalizeAngle(localAngle + facingOffset);
-        const hit = mapSystem.castRay(ant.position, worldAngle, SENSOR_TUNING.maxDistance);
-        const proximity = hit ? 1 - hit.distance / SENSOR_TUNING.maxDistance : 0;
-        const color = hit ? hit.object.colorRgb : [0, 0, 0];
-        rays.push({
-          angle: worldAngle,
-          localAngle: normalizeAngle(localAngle),
-          hit,
-          proximity,
-          color,
-        });
-        wedgeHits.push({ proximity, color });
+    for (const ant of ants) {
+      this.#sampleAnt(ant, mapSystem, dynamicIndex);
+    }
+  }
+
+  #sampleAnt(ant, mapSystem, dynamicIndex) {
+    const facingOffset = getFacingOffset(ant);
+    const staticCandidates = mapSystem.getStaticSensorCandidates(ant.position, SENSOR_TUNING.maxDistance);
+    const dynamicCandidates = mapSystem.getDynamicSensorCandidates(dynamicIndex, ant.position, SENSOR_TUNING.maxDistance);
+    const nearbyWalls = staticCandidates.filter((object) => object.occludesVision);
+    const wedgeData = Array.from({ length: SENSOR_TUNING.wedgeCount }, (_, index) => ({
+      index,
+      name: SENSOR_TUNING.wedgeNames[index],
+      localAngle: SENSOR_TUNING.wedgeCenters[index],
+      hitCount: 0,
+      colorSum: 0,
+      closestDistance: null,
+      closestPoint: null,
+      closestObjectType: null,
+    }));
+    const visibleObjects = [];
+
+    for (const object of [...staticCandidates, ...dynamicCandidates]) {
+      if (object.sourceType === "ant" && object.sourceId === ant.id) {
+        continue;
       }
 
-      const closestProximity = wedgeHits.reduce(
-        (maxProximity, ray) => Math.max(maxProximity, ray.proximity),
-        0
-      );
-      const avgColor = wedgeHits.reduce(
-        (sum, ray) => [sum[0] + ray.color[0], sum[1] + ray.color[1], sum[2] + ray.color[2]],
-        [0, 0, 0]
-      ).map((channel) => channel / wedgeHits.length);
-      const scent = mapSystem.sampleFoodScent(ant.position, normalizeAngle(wedgeCenter + facingOffset), SENSOR_TUNING.scentRange);
+      const { nearestPoint, distance } = mapSystem.getDistanceToObject(ant.position, object);
+      if (distance > SENSOR_TUNING.maxDistance) {
+        continue;
+      }
 
-      wedges.push({
-        index: wedgeIndex,
-        name: SENSOR_TUNING.wedgeNames[wedgeIndex],
-        localAngle: wedgeCenter,
-        proximity: closestProximity,
-        color: avgColor,
-        scent,
-        pheromone: 0,
+      const occluded = object.occludesVision
+        ? false
+        : mapSystem.isWallOccluding(ant.position, nearestPoint, distance, nearbyWalls);
+
+      if (occluded) {
+        continue;
+      }
+
+      const wedgeIndices = new Set();
+      for (const samplePoint of mapSystem.getSensorSamplePoints(ant.position, object)) {
+        const dx = samplePoint.x - ant.position.x;
+        const dy = samplePoint.y - ant.position.y;
+        const sampleDistance = Math.hypot(dx, dy);
+        if (sampleDistance === 0 || sampleDistance > SENSOR_TUNING.maxDistance) {
+          continue;
+        }
+
+        const worldAngle = normalizeAngle(Math.atan2(dy, dx));
+        const localAngle = normalizeAngle(worldAngle - facingOffset);
+        const wedgeIndex = getWedgeIndex(localAngle);
+        if (wedgeIndex !== null) {
+          wedgeIndices.add(wedgeIndex);
+        }
+      }
+
+      if (wedgeIndices.size === 0) {
+        continue;
+      }
+
+      visibleObjects.push({
+        type: object.type,
+        x: nearestPoint.x,
+        y: nearestPoint.y,
+        centerX: nearestPoint.x,
+        centerY: nearestPoint.y,
+        colorScalar: object.sensorColorScalar,
+        distance,
+        wedges: [...wedgeIndices],
       });
+
+      for (const wedgeIndex of wedgeIndices) {
+        const wedge = wedgeData[wedgeIndex];
+        wedge.hitCount += 1;
+        wedge.colorSum += object.sensorColorScalar;
+
+        if (wedge.closestDistance === null || distance < wedge.closestDistance) {
+          wedge.closestDistance = distance;
+          wedge.closestPoint = nearestPoint;
+          wedge.closestObjectType = object.type;
+        }
+      }
     }
+
+    const wedges = wedgeData.map((wedge) => ({
+      index: wedge.index,
+      name: wedge.name,
+      localAngle: wedge.localAngle,
+      proximity: wedge.closestDistance === null
+        ? 0
+        : 1 - wedge.closestDistance / SENSOR_TUNING.maxDistance,
+      closestDistance: wedge.closestDistance,
+      colorScalar: wedge.hitCount > 0 ? wedge.colorSum / wedge.hitCount : 0,
+      objectCount: wedge.hitCount,
+      closestPoint: wedge.closestPoint,
+      closestObjectType: wedge.closestObjectType,
+    }));
 
     ant.sensorState = {
       wedges,
-      rays,
+      rays: [],
+      debug: {
+        visibleObjects,
+      },
       scalars: {
+        foodScent: mapSystem.sampleFoodScentAt(ant.position),
+        pheromone: 0,
         speed: Math.min(1, Math.abs(ant.velocity.x) / 60),
         attached: ant.attached ? 1 : 0,
         connectionCount: Math.min(1, ant.connectionIds.length / 4),

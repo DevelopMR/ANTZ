@@ -1,4 +1,89 @@
-import { ANT_TUNING, MAP_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
+import {
+  ANT_TUNING,
+  MAP_TUNING,
+  SENSOR_TUNING,
+  SIMULATION_TUNING,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+} from "../config/tuning.js";
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function makeCellKey(cellX, cellY) {
+  return `${cellX},${cellY}`;
+}
+
+function getObjectBounds(object) {
+  if (object.shape === "rect") {
+    return {
+      minX: object.x,
+      maxX: object.x + object.width,
+      minY: object.y,
+      maxY: object.y + object.height,
+    };
+  }
+
+  return {
+    minX: object.x - object.radius,
+    maxX: object.x + object.radius,
+    minY: object.y - object.radius,
+    maxY: object.y + object.radius,
+  };
+}
+
+function createSpatialIndex(objects, cellSize) {
+  const index = new Map();
+
+  for (const object of objects) {
+    const bounds = getObjectBounds(object);
+    const minCellX = Math.floor(bounds.minX / cellSize);
+    const maxCellX = Math.floor(bounds.maxX / cellSize);
+    const minCellY = Math.floor(bounds.minY / cellSize);
+    const maxCellY = Math.floor(bounds.maxY / cellSize);
+
+    for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
+      for (let cellY = minCellY; cellY <= maxCellY; cellY += 1) {
+        const key = makeCellKey(cellX, cellY);
+        if (!index.has(key)) {
+          index.set(key, []);
+        }
+        index.get(key).push(object);
+      }
+    }
+  }
+
+  return index;
+}
+
+function querySpatialIndex(index, position, radius, cellSize) {
+  const results = [];
+  const seen = new Set();
+  const minCellX = Math.floor((position.x - radius) / cellSize);
+  const maxCellX = Math.floor((position.x + radius) / cellSize);
+  const minCellY = Math.floor((position.y - radius) / cellSize);
+  const maxCellY = Math.floor((position.y + radius) / cellSize);
+
+  for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
+    for (let cellY = minCellY; cellY <= maxCellY; cellY += 1) {
+      const key = makeCellKey(cellX, cellY);
+      const bucket = index.get(key);
+      if (!bucket) {
+        continue;
+      }
+
+      for (const object of bucket) {
+        if (!seen.has(object.id)) {
+          seen.add(object.id);
+          results.push(object);
+        }
+      }
+    }
+  }
+
+  return results;
+}
 
 function makeWall(id, x, y, width, height) {
   return {
@@ -10,8 +95,9 @@ function makeWall(id, x, y, width, height) {
     width,
     height,
     climbable: true,
+    occludesVision: true,
     color: MAP_TUNING.wallColor,
-    colorRgb: [0.62, 0.47, 0.29],
+    sensorColorScalar: SENSOR_TUNING.colorRange.obstacle,
   };
 }
 
@@ -24,8 +110,9 @@ function makePeg(id, x, y, radius) {
     y,
     radius,
     climbable: true,
+    occludesVision: false,
     color: MAP_TUNING.pegColor,
-    colorRgb: [0.48, 0.34, 0.2],
+    sensorColorScalar: SENSOR_TUNING.colorRange.obstacle,
   };
 }
 
@@ -38,8 +125,25 @@ function makeFood(id, x, y, radius) {
     y,
     radius,
     climbable: false,
+    occludesVision: false,
     color: MAP_TUNING.foodColor,
-    colorRgb: [0.31, 0.54, 0.23],
+    sensorColorScalar: SENSOR_TUNING.colorRange.food,
+  };
+}
+
+function makeGround(y) {
+  return {
+    id: "ground",
+    type: "ground",
+    shape: "rect",
+    x: 0,
+    y,
+    width: WORLD_WIDTH,
+    height: WORLD_HEIGHT - y,
+    climbable: false,
+    occludesVision: false,
+    color: MAP_TUNING.groundColor,
+    sensorColorScalar: SENSOR_TUNING.colorRange.obstacle,
   };
 }
 
@@ -81,10 +185,10 @@ function rayRectIntersection(origin, direction, rect, maxDistance) {
   const invDx = direction.x !== 0 ? 1 / direction.x : Number.POSITIVE_INFINITY;
   const invDy = direction.y !== 0 ? 1 / direction.y : Number.POSITIVE_INFINITY;
 
-  let tx1 = (minX - origin.x) * invDx;
-  let tx2 = (maxX - origin.x) * invDx;
-  let ty1 = (minY - origin.y) * invDy;
-  let ty2 = (maxY - origin.y) * invDy;
+  const tx1 = (minX - origin.x) * invDx;
+  const tx2 = (maxX - origin.x) * invDx;
+  const ty1 = (minY - origin.y) * invDy;
+  const ty2 = (maxY - origin.y) * invDy;
 
   const tMin = Math.max(Math.min(tx1, tx2), Math.min(ty1, ty2));
   const tMax = Math.min(Math.max(tx1, tx2), Math.max(ty1, ty2));
@@ -107,12 +211,62 @@ function rayRectIntersection(origin, direction, rect, maxDistance) {
   };
 }
 
+function getObjectCenter(object) {
+  if (object.shape === "rect") {
+    return {
+      x: object.x + object.width * 0.5,
+      y: object.y + object.height * 0.5,
+    };
+  }
+
+  return {
+    x: object.x,
+    y: object.y,
+  };
+}
+
+function getNearestPointOnRect(origin, rect) {
+  return {
+    x: clamp(origin.x, rect.x, rect.x + rect.width),
+    y: clamp(origin.y, rect.y, rect.y + rect.height),
+  };
+}
+
+function getNearestPointOnCircle(origin, circle) {
+  const dx = circle.x - origin.x;
+  const dy = circle.y - origin.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance === 0) {
+    return {
+      x: circle.x + circle.radius,
+      y: circle.y,
+    };
+  }
+
+  const scale = Math.max(0, distance - circle.radius) / distance;
+  return {
+    x: origin.x + dx * scale,
+    y: origin.y + dy * scale,
+  };
+}
+
+function getDistanceToObject(origin, object) {
+  const nearestPoint = object.shape === "rect"
+    ? getNearestPointOnRect(origin, object)
+    : getNearestPointOnCircle(origin, object);
+
+  return {
+    nearestPoint,
+    distance: Math.hypot(nearestPoint.x - origin.x, nearestPoint.y - origin.y),
+  };
+}
+
 export class MapSystem {
   constructor() {
-    this.ground = {
-      y: SIMULATION_TUNING.groundY + 8,
-      color: MAP_TUNING.groundColor,
-    };
+    const groundTop = SIMULATION_TUNING.groundY + 8;
+
+    this.ground = makeGround(groundTop);
 
     this.walls = [
       makeWall("wall-0", 276, 500, 26, this.ground.y - 500),
@@ -135,7 +289,8 @@ export class MapSystem {
       makeFood("food-3", 208, this.ground.y - 18, 9),
     ];
 
-    this.sensorObjects = [...this.walls, ...this.pegs, ...this.foodNodes];
+    this.staticSensorObjects = [this.ground, ...this.walls, ...this.pegs, ...this.foodNodes];
+    this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
   }
 
   getRenderState() {
@@ -147,57 +302,133 @@ export class MapSystem {
     };
   }
 
-  castRay(origin, angle, maxDistance) {
-    const direction = {
-      x: Math.cos(angle),
-      y: Math.sin(angle),
+  getStaticSensorCandidates(position, radius) {
+    return querySpatialIndex(
+      this.staticSensorIndex,
+      position,
+      radius,
+      SENSOR_TUNING.spatialHashCellSize
+    );
+  }
+
+  buildDynamicSensorIndex(objects) {
+    return createSpatialIndex(objects, SENSOR_TUNING.spatialHashCellSize);
+  }
+
+  getDynamicSensorCandidates(index, position, radius) {
+    return querySpatialIndex(index, position, radius, SENSOR_TUNING.spatialHashCellSize);
+  }
+
+  createDynamicSensorObjects(ants, queen) {
+    const queenObject = {
+      id: "queen",
+      sourceType: "queen",
+      sourceId: "queen",
+      type: "queen",
+      shape: "circle",
+      x: queen.position.x,
+      y: queen.position.y,
+      radius: SENSOR_TUNING.queenSenseRadius,
+      occludesVision: false,
+      sensorColorScalar: SENSOR_TUNING.colorRange.queen,
     };
 
-    let closestHit = null;
+    const antObjects = ants.map((ant) => ({
+      id: `ant-${ant.id}`,
+      sourceType: "ant",
+      sourceId: ant.id,
+      type: "ant",
+      shape: "circle",
+      x: ant.position.x,
+      y: ant.position.y - 8,
+      radius: SENSOR_TUNING.antSenseRadius,
+      occludesVision: false,
+      sensorColorScalar: SENSOR_TUNING.colorRange.ant,
+    }));
 
-    for (const object of this.sensorObjects) {
-      const hit = object.shape === "rect"
-        ? rayRectIntersection(origin, direction, object, maxDistance)
-        : rayCircleIntersection(origin, direction, object, maxDistance);
+    return [queenObject, ...antObjects];
+  }
 
-      if (!hit) {
+  getNearestPointOnObject(origin, object) {
+    return object.shape === "rect"
+      ? getNearestPointOnRect(origin, object)
+      : getNearestPointOnCircle(origin, object);
+  }
+
+  getDistanceToObject(origin, object) {
+    return getDistanceToObject(origin, object);
+  }
+
+  getObjectCenter(object) {
+    return getObjectCenter(object);
+  }
+
+  getSensorSamplePoints(origin, object) {
+    if (object.type === "ground") {
+      return [this.getNearestPointOnObject(origin, object)];
+    }
+
+    if (object.shape === "circle") {
+      return [
+        this.getNearestPointOnObject(origin, object),
+        this.getObjectCenter(object),
+        { x: object.x + object.radius, y: object.y },
+        { x: object.x - object.radius, y: object.y },
+        { x: object.x, y: object.y + object.radius },
+        { x: object.x, y: object.y - object.radius },
+      ];
+    }
+
+    return [
+      this.getNearestPointOnObject(origin, object),
+      this.getObjectCenter(object),
+      { x: object.x, y: object.y },
+      { x: object.x + object.width, y: object.y },
+      { x: object.x, y: object.y + object.height },
+      { x: object.x + object.width, y: object.y + object.height },
+      { x: object.x + object.width * 0.5, y: object.y },
+      { x: object.x + object.width * 0.5, y: object.y + object.height },
+      { x: object.x, y: object.y + object.height * 0.5 },
+      { x: object.x + object.width, y: object.y + object.height * 0.5 },
+    ];
+  }
+
+  isWallOccluding(origin, targetPoint, targetDistance, nearbyWalls, ignoreWallId = null) {
+    if (targetDistance <= 0) {
+      return false;
+    }
+
+    const direction = {
+      x: (targetPoint.x - origin.x) / targetDistance,
+      y: (targetPoint.y - origin.y) / targetDistance,
+    };
+
+    for (const wall of nearbyWalls) {
+      if (wall.id === ignoreWallId) {
         continue;
       }
 
-      if (!closestHit || hit.distance < closestHit.distance) {
-        closestHit = {
-          ...hit,
-          object,
-          angle,
-          direction,
-        };
+      const hit = rayRectIntersection(origin, direction, wall, targetDistance);
+      if (hit && hit.distance < targetDistance - 0.75) {
+        return true;
       }
     }
 
-    return closestHit;
+    return false;
   }
 
-  sampleFoodScent(origin, angle, maxDistance) {
-    const direction = {
-      x: Math.cos(angle),
-      y: Math.sin(angle),
-    };
+  sampleFoodScentAt(position) {
     let totalScent = 0;
 
     for (const foodNode of this.foodNodes) {
-      const dx = foodNode.x - origin.x;
-      const dy = foodNode.y - origin.y;
+      const dx = foodNode.x - position.x;
+      const dy = foodNode.y - position.y;
       const distance = Math.hypot(dx, dy);
-      if (distance > maxDistance || distance === 0) {
+      if (distance === 0 || distance > SENSOR_TUNING.localFoodScentRange) {
         continue;
       }
 
-      const alignment = (dx * direction.x + dy * direction.y) / distance;
-      if (alignment <= 0) {
-        continue;
-      }
-
-      totalScent += alignment * (1 - distance / maxDistance);
+      totalScent += 1 - distance / SENSOR_TUNING.localFoodScentRange;
     }
 
     return Math.min(1, totalScent);

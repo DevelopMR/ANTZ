@@ -3,9 +3,20 @@ import { MAP_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
-function rgbToHex(color) {
-  const [r, g, b] = color.map((channel) => Math.max(0, Math.min(255, Math.round(channel * 255))));
-  return (r << 16) + (g << 8) + b;
+function sensorScalarToHex(value) {
+  if (value >= 0.9) {
+    return 0x5f9b42;
+  }
+  if (value >= 0.6) {
+    return 0xa53a28;
+  }
+  if (value >= 0.3) {
+    return 0x2a2119;
+  }
+  if (value > 0) {
+    return 0x8f6a3d;
+  }
+  return 0x81725c;
 }
 
 export class WorldRenderer {
@@ -116,29 +127,39 @@ export class WorldRenderer {
 
   #drawSensorDebug() {
     const ant = this.simulation.ants[SENSOR_TUNING.debugAntIndex];
-    if (!ant || !ant.sensorState?.rays) {
+    if (!ant || !ant.sensorState?.wedges) {
       return;
     }
 
+    const facingOffset = ant.facing > 0 ? 0 : Math.PI;
     const g = this.sensorOverlay;
     g.clear();
 
-    for (const ray of ant.sensorState.rays) {
-      const hitPoint = ray.hit
-        ? ray.hit.point
-        : {
-            x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
-            y: ant.position.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
-          };
-
-      const lineColor = ray.hit ? rgbToHex(ray.color) : 0x81725c;
-      g.lineStyle(1, lineColor, ray.hit ? 0.55 : 0.18);
+    const visibleObjects = ant.sensorState.debug?.visibleObjects ?? [];
+    for (const object of visibleObjects) {
+      const markerColor = sensorScalarToHex(object.colorScalar);
+      g.lineStyle(1, markerColor, 0.16);
       g.moveTo(ant.position.x, ant.position.y - 10);
-      g.lineTo(hitPoint.x, hitPoint.y);
+      g.lineTo(object.x, object.y);
+      g.beginFill(markerColor, 0.42);
+      g.drawCircle(object.centerX, object.centerY, 2.2);
+      g.endFill();
+    }
 
-      if (ray.hit) {
-        g.beginFill(lineColor, 0.8);
-        g.drawCircle(hitPoint.x, hitPoint.y, 2.2);
+    for (const wedge of ant.sensorState.wedges) {
+      const worldAngle = wedge.localAngle + facingOffset;
+      const endPoint = wedge.closestPoint ?? {
+        x: ant.position.x + Math.cos(worldAngle) * SENSOR_TUNING.maxDistance,
+        y: ant.position.y + Math.sin(worldAngle) * SENSOR_TUNING.maxDistance,
+      };
+      const lineColor = sensorScalarToHex(wedge.colorScalar);
+      g.lineStyle(2, lineColor, wedge.closestPoint ? 0.68 : 0.18);
+      g.moveTo(ant.position.x, ant.position.y - 10);
+      g.lineTo(endPoint.x, endPoint.y);
+
+      if (wedge.closestPoint) {
+        g.beginFill(lineColor, 0.9);
+        g.drawCircle(endPoint.x, endPoint.y, 2.6);
         g.endFill();
       }
     }
@@ -147,7 +168,7 @@ export class WorldRenderer {
   #createQueenMarker() {
     const queenMarker = new Graphics();
     queenMarker.lineStyle(3, 0xfce0a7, 1);
-    queenMarker.beginFill(0x8d2a1e);
+    queenMarker.beginFill(MAP_TUNING.queenColor);
     queenMarker.drawCircle(0, 0, 18);
     queenMarker.endFill();
     queenMarker.position.set(
