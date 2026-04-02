@@ -33,34 +33,13 @@ export class WorldRenderer {
     this.#drawWorldBackdrop();
     this.#createGoalMarker();
     this.#createQueenMarker();
-    this.rebuildAntViews({ animationMode: "animated", sizeProfile: "original" });
+    this.#createAntViews();
   }
 
-  render(elapsedTime, renderSettings) {
+  render(elapsedTime) {
     for (const antView of this.antViews) {
-      antView.sync(elapsedTime, renderSettings);
+      antView.sync(elapsedTime);
     }
-  }
-
-  rebuildAntViews(renderSettings = { animationMode: "animated", sizeProfile: "original" }) {
-    if (this.antLayer) {
-      this.worldContainer.removeChild(this.antLayer);
-      this.antLayer.destroy({ children: true });
-    }
-
-    this.antLayer = new ParticleContainer(this.simulation.ants.length, {
-      position: true,
-      scale: true,
-      uvs: true,
-    });
-    this.worldContainer.addChild(this.antLayer);
-
-    this.antViews = this.simulation.ants.map((ant) => {
-      const antView = new AntView(ant, this.antSpriteLibrary);
-      this.antLayer.addChild(antView.sprite);
-      antView.sync(this.simulation.elapsedTime, renderSettings);
-      return antView;
-    });
   }
 
   destroy() {
@@ -134,5 +113,21 @@ export class WorldRenderer {
     );
 
     this.worldContainer.addChild(goalMarker);
+  }
+
+  #createAntViews() {
+    this.antLayer = new ParticleContainer(this.simulation.ants.length, {
+      position: true,
+      scale: true,
+      uvs: true,
+    });
+    this.worldContainer.addChild(this.antLayer);
+
+    this.antViews = this.simulation.ants.map((ant) => {
+      const antView = new AntView(ant, this.antSpriteLibrary);
+      this.antLayer.addChild(antView.sprite);
+      antView.sync(this.simulation.elapsedTime);
+      return antView;
+    });
   }
 }
