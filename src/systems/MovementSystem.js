@@ -7,7 +7,7 @@ function clamp(value, min, max) {
 export class MovementSystem {
   constructor(random = Math.random) {
     this.random = random;
-    this.stateCycle = ["walking", "reaching", "walking", "grasping"];
+    this.stateCycle = ["standing", "walking", "reaching", "walking", "grasping"];
   }
 
   update(ants, deltaTime) {
@@ -46,14 +46,15 @@ export class MovementSystem {
       ) * ant.movement.wanderStrength;
     }
 
-    if (ant.visualState === "walking") {
-      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.9 * deltaTime;
-    } else if (ant.visualState === "reaching") {
-      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.35 * deltaTime;
-    } else {
-      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.18 * deltaTime;
-    }
+    const stateTurnScale = ant.visualState === "walking"
+      ? 0.9
+      : ant.visualState === "reaching"
+        ? 0.25
+        : ant.visualState === "standing"
+          ? 0.1
+          : 0.08;
 
+    ant.movement.desiredDirection += ant.movement.steeringTarget * stateTurnScale * deltaTime;
     ant.movement.desiredDirection = clamp(ant.movement.desiredDirection, -1, 1);
 
     if (Math.abs(ant.movement.desiredDirection) > 0.08) {
@@ -65,8 +66,10 @@ export class MovementSystem {
     const postureSpeedScale = ant.visualState === "walking"
       ? 1
       : ant.visualState === "reaching"
-        ? 0.2
-        : 0.05;
+        ? 0.12
+        : ant.visualState === "standing"
+          ? 0
+          : 0.03;
 
     const forwardForce =
       ANT_TUNING.forwardDrive *

@@ -1,12 +1,14 @@
 import { Application, Container, Graphics } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
 import { SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
 import { AntView } from "./AntView.js";
+import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
 export class WorldRenderer {
   constructor(simulation) {
     this.simulation = simulation;
     this.antViews = [];
     this.app = null;
+    this.antSpriteLibrary = null;
   }
 
   async initialize(container) {
@@ -25,6 +27,7 @@ export class WorldRenderer {
 
     this.worldContainer = new Container();
     this.app.stage.addChild(this.worldContainer);
+    this.antSpriteLibrary = createAntSpriteLibrary();
 
     this.#drawWorldBackdrop();
     this.#createGoalMarker();
@@ -33,7 +36,6 @@ export class WorldRenderer {
   }
 
   render(elapsedTime) {
-    this.antViews.sort((left, right) => left.ant.position.y - right.ant.position.y);
     for (const antView of this.antViews) {
       antView.sync(elapsedTime);
     }
@@ -117,8 +119,8 @@ export class WorldRenderer {
     this.worldContainer.addChild(antLayer);
 
     this.antViews = this.simulation.ants.map((ant) => {
-      const antView = new AntView(ant, () => new Graphics());
-      antLayer.addChild(antView.graphics);
+      const antView = new AntView(ant, this.antSpriteLibrary);
+      antLayer.addChild(antView.sprite);
       antView.sync(this.simulation.elapsedTime);
       return antView;
     });

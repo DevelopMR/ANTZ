@@ -40,8 +40,7 @@ export class Ant {
 
     this.visual = {
       animationOffset: visualProfile.animationOffset,
-      legPhase: visualProfile.legPhase,
-      wiggleStrength: visualProfile.wiggleStrength,
+      frameSeed: visualProfile.frameSeed,
     };
   }
 }

@@ -73,9 +73,8 @@ export class SimulationController {
         visualProfile: {
           state: visualState,
           facing: initialDirection,
-          animationOffset: randomRange(this.random, 0, Math.PI * 2),
-          legPhase: randomRange(this.random, 0, Math.PI * 2),
-          wiggleStrength: randomRange(this.random, 0.75, 1.15),
+          animationOffset: randomRange(this.random, 0, 1),
+          frameSeed: randomRange(this.random, 0, 10),
         },
       }));
     }

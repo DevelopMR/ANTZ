@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 72,
+  antCount: 40,
   spawnWidth: 220,
   fixedTimeStep: 1 / 60,
   maxDeltaTime: 1 / 20,
@@ -21,17 +21,21 @@ export const SIMULATION_TUNING = {
 };
 
 export const ANT_TUNING = {
-  headRadius: 5,
-  thoraxRadius: 5,
-  abdomenRadius: 8,
+  spriteWidth: 56,
+  spriteHeight: 56,
   maxSpeed: 46,
   forwardDrive: 60,
   steeringNoiseIntervalMin: 0.45,
   steeringNoiseIntervalMax: 1.3,
   steeringImpulseMin: -1,
   steeringImpulseMax: 1,
-  steeringSmoothing: 2.4,
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
-  visualStateCycle: ["walking", "reaching", "walking", "grasping"],
+  visualStateCycle: ["standing", "walking", "reaching", "walking", "grasping"],
+  animationFps: {
+    standing: 2.4,
+    walking: 7.5,
+    reaching: 4.2,
+    grasping: 2.2,
+  },
 };
