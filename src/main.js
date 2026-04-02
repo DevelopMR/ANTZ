@@ -6,6 +6,11 @@ function createRuntimeSettings() {
   return {
     animationMode: "animated",
     simulationMode: "running",
+    spreadMode: "grounded",
+    simulationHz: 60,
+    movementMode: "precompute",
+    behaviorDetail: "full",
+    sizeProfile: "original",
   };
 }
 
@@ -25,21 +30,48 @@ function resetMetrics(metrics) {
   metrics.fps = 0;
 }
 
-function bindControls(runtimeSettings, simulation, metrics) {
+function bindControls(runtimeSettings, simulation, renderer, metrics) {
   const animationSelect = document.querySelector("#animation-mode");
   const simulationSelect = document.querySelector("#simulation-mode");
+  const spreadSelect = document.querySelector("#spread-mode");
+  const simulationHzSelect = document.querySelector("#simulation-hz");
+  const movementModeSelect = document.querySelector("#movement-mode");
+  const behaviorDetailSelect = document.querySelector("#behavior-detail");
+  const sizeProfileSelect = document.querySelector("#size-profile");
   const stepButton = document.querySelector("#step-button");
   const resetMetricsButton = document.querySelector("#reset-metrics");
+  const respawnButton = document.querySelector("#respawn-button");
+  const applyLayoutButton = document.querySelector("#apply-layout");
   const fpsStat = document.querySelector("#stat-fps");
   const frameMsStat = document.querySelector("#stat-frame-ms");
   const animationModeStat = document.querySelector("#stat-animation-mode");
   const simModeStat = document.querySelector("#stat-sim-mode");
   const antCountStat = document.querySelector("#stat-ant-count");
   const sampleWindowStat = document.querySelector("#stat-sample-window");
+  const layoutModeStat = document.querySelector("#stat-layout-mode");
+  const simHzStat = document.querySelector("#stat-sim-hz");
+  const movementModeStat = document.querySelector("#stat-movement-mode");
+  const detailModeStat = document.querySelector("#stat-detail-mode");
+  const sizeModeStat = document.querySelector("#stat-size-mode");
+
+  function refreshAntCount() {
+    antCountStat.textContent = String(simulation.ants.length);
+  }
+
+  function applyRespawn() {
+    simulation.respawn(runtimeSettings);
+    renderer.rebuildAntViews(runtimeSettings);
+    refreshAntCount();
+  }
 
   animationSelect.value = runtimeSettings.animationMode;
   simulationSelect.value = runtimeSettings.simulationMode;
-  antCountStat.textContent = String(simulation.ants.length);
+  spreadSelect.value = runtimeSettings.spreadMode;
+  simulationHzSelect.value = String(runtimeSettings.simulationHz);
+  movementModeSelect.value = runtimeSettings.movementMode;
+  behaviorDetailSelect.value = runtimeSettings.behaviorDetail;
+  sizeProfileSelect.value = runtimeSettings.sizeProfile;
+  refreshAntCount();
 
   animationSelect.addEventListener("change", () => {
     runtimeSettings.animationMode = animationSelect.value;
@@ -49,9 +81,32 @@ function bindControls(runtimeSettings, simulation, metrics) {
     runtimeSettings.simulationMode = simulationSelect.value;
   });
 
-  stepButton.addEventListener("click", () => {
-    simulation.update(SIMULATION_TUNING.fixedTimeStep);
+  spreadSelect.addEventListener("change", () => {
+    runtimeSettings.spreadMode = spreadSelect.value;
   });
+
+  simulationHzSelect.addEventListener("change", () => {
+    runtimeSettings.simulationHz = Number(simulationHzSelect.value);
+  });
+
+  movementModeSelect.addEventListener("change", () => {
+    runtimeSettings.movementMode = movementModeSelect.value;
+  });
+
+  behaviorDetailSelect.addEventListener("change", () => {
+    runtimeSettings.behaviorDetail = behaviorDetailSelect.value;
+  });
+
+  sizeProfileSelect.addEventListener("change", () => {
+    runtimeSettings.sizeProfile = sizeProfileSelect.value;
+  });
+
+  stepButton.addEventListener("click", () => {
+    simulation.step(runtimeSettings);
+  });
+
+  respawnButton.addEventListener("click", applyRespawn);
+  applyLayoutButton.addEventListener("click", applyRespawn);
 
   resetMetricsButton.addEventListener("click", () => {
     resetMetrics(metrics);
@@ -63,6 +118,11 @@ function bindControls(runtimeSettings, simulation, metrics) {
     animationModeStat.textContent = runtimeSettings.animationMode === "animated" ? "Animated" : "Static";
     simModeStat.textContent = runtimeSettings.simulationMode === "running" ? "Running" : "Paused";
     sampleWindowStat.textContent = `${metrics.sampleElapsed.toFixed(1)}s`;
+    layoutModeStat.textContent = runtimeSettings.spreadMode === "spread" ? "Spread" : "Grounded";
+    simHzStat.textContent = `${runtimeSettings.simulationHz}`;
+    movementModeStat.textContent = runtimeSettings.movementMode === "precompute" ? "Precompute" : "Simplify";
+    detailModeStat.textContent = runtimeSettings.behaviorDetail === "full" ? "Full" : "Low";
+    sizeModeStat.textContent = runtimeSettings.sizeProfile === "compact" ? "Compact" : "Original";
   };
 }
 
@@ -78,7 +138,7 @@ async function boot() {
   const renderer = new WorldRenderer(simulation);
   await renderer.initialize(container);
 
-  const refreshStats = bindControls(runtimeSettings, simulation, metrics);
+  const refreshStats = bindControls(runtimeSettings, simulation, renderer, metrics);
   let previousTime = performance.now();
   let statsRefreshTimer = 0;
 
@@ -87,7 +147,7 @@ async function boot() {
     previousTime = now;
 
     if (runtimeSettings.simulationMode === "running") {
-      simulation.update(deltaTime);
+      simulation.update(deltaTime, runtimeSettings);
     }
 
     renderer.render(simulation.elapsedTime, runtimeSettings);

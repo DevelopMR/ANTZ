@@ -8,26 +8,40 @@ export class MovementSystem {
   constructor(random = Math.random) {
     this.random = random;
     this.stateCycle = ["standing", "walking", "reaching", "walking", "grasping"];
+    this.tickCount = 0;
+    this.precomputedDamping = {
+      30: Math.pow(SIMULATION_TUNING.linearDamping, 2),
+      60: SIMULATION_TUNING.linearDamping,
+    };
   }
 
-  update(ants, deltaTime) {
+  update(ants, deltaTime, runtimeSettings = {}) {
+    this.tickCount += 1;
+    const isLowDetail = runtimeSettings.behaviorDetail === "low";
+
     for (const ant of ants) {
-      this.#updatePosture(ant, deltaTime);
-      this.#updateSteeringIntent(ant, deltaTime);
-      this.#integrateMotion(ant, deltaTime);
+      const skipBehaviorWork = isLowDetail && ant.id % 2 !== this.tickCount % 2;
+
+      if (!skipBehaviorWork) {
+        this.#updatePosture(ant, deltaTime, runtimeSettings);
+        this.#updateSteeringIntent(ant, deltaTime);
+      }
+
+      this.#integrateMotion(ant, deltaTime, runtimeSettings);
       this.#containWithinWorld(ant);
     }
   }
 
-  #updatePosture(ant, deltaTime) {
+  #updatePosture(ant, deltaTime, runtimeSettings) {
     ant.movement.postureTimer -= deltaTime;
 
     if (ant.movement.postureTimer <= 0) {
       const nextIndex = Math.floor(this.random() * this.stateCycle.length);
       ant.visualState = this.stateCycle[nextIndex];
+      const durationScale = runtimeSettings.behaviorDetail === "low" ? 1.6 : 1;
       ant.movement.postureTimer = this.#randomRange(
-        ANT_TUNING.postureDurationMin,
-        ANT_TUNING.postureDurationMax
+        ANT_TUNING.postureDurationMin * durationScale,
+        ANT_TUNING.postureDurationMax * durationScale
       );
     }
   }
@@ -62,7 +76,7 @@ export class MovementSystem {
     }
   }
 
-  #integrateMotion(ant, deltaTime) {
+  #integrateMotion(ant, deltaTime, runtimeSettings) {
     const postureSpeedScale = ant.visualState === "walking"
       ? 1
       : ant.visualState === "reaching"
@@ -78,9 +92,17 @@ export class MovementSystem {
       postureSpeedScale;
 
     ant.velocity.x += forwardForce * deltaTime;
-    ant.velocity.x *= Math.pow(SIMULATION_TUNING.linearDamping, deltaTime * 60);
-    ant.velocity.y = 0;
 
+    if (runtimeSettings.movementMode === "precompute") {
+      const simHz = runtimeSettings.simulationHz === 30 ? 30 : 60;
+      ant.velocity.x *= this.precomputedDamping[simHz];
+    } else {
+      ant.velocity.x *= runtimeSettings.movementMode === "simplify"
+        ? SIMULATION_TUNING.linearDamping
+        : Math.pow(SIMULATION_TUNING.linearDamping, deltaTime * 60);
+    }
+
+    ant.velocity.y = 0;
     ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.maxSpeed, ANT_TUNING.maxSpeed);
     ant.position.x += ant.velocity.x * deltaTime;
     ant.position.y = ant.movement.groundY;

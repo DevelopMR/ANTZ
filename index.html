@@ -10,7 +10,6 @@
       --page-bg: #d9c7a3;
       --hud-bg: rgba(32, 24, 12, 0.82);
       --hud-text: #f4ead3;
-      --accent: #9b2d20;
       --accent-soft: #ffd6a1;
       --input-bg: rgba(255, 245, 224, 0.08);
       --input-border: rgba(255, 244, 214, 0.18);
@@ -65,14 +64,22 @@
     .perf-panel {
       top: 16px;
       right: 16px;
-      width: 280px;
+      width: 320px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
       display: grid;
       gap: 10px;
     }
 
-    .perf-panel__row {
+    .perf-panel__row,
+    .perf-panel__section {
       display: grid;
       gap: 6px;
+    }
+
+    .perf-panel__section {
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 244, 214, 0.08);
     }
 
     .perf-panel__controls {
@@ -139,25 +146,66 @@
   <aside class="perf-panel">
     <div>
       <strong>Benchmark Panel</strong>
-      <div class="perf-panel__accent">Visual compare: animated vs static ants</div>
+      <div class="perf-panel__accent">Visual compare: render and sim tradeoffs</div>
     </div>
-    <div class="perf-panel__row">
-      <label for="animation-mode">Ant Animation</label>
-      <select id="animation-mode">
-        <option value="animated">Animated</option>
-        <option value="static">Static</option>
-      </select>
+    <div class="perf-panel__section">
+      <div class="perf-panel__row">
+        <label for="animation-mode">Ant Animation</label>
+        <select id="animation-mode">
+          <option value="animated">Animated</option>
+          <option value="static">Static</option>
+        </select>
+      </div>
+      <div class="perf-panel__row">
+        <label for="simulation-mode">Simulation</label>
+        <select id="simulation-mode">
+          <option value="running">Running</option>
+          <option value="paused">Paused</option>
+        </select>
+      </div>
     </div>
-    <div class="perf-panel__row">
-      <label for="simulation-mode">Simulation</label>
-      <select id="simulation-mode">
-        <option value="running">Running</option>
-        <option value="paused">Paused</option>
-      </select>
+    <div class="perf-panel__section">
+      <div class="perf-panel__row">
+        <label for="spread-mode">Spawn Layout</label>
+        <select id="spread-mode">
+          <option value="grounded">Grounded Cluster</option>
+          <option value="spread">Spread Ants</option>
+        </select>
+      </div>
+      <div class="perf-panel__row">
+        <label for="simulation-hz">Simulation Frequency</label>
+        <select id="simulation-hz">
+          <option value="60">60 Hz</option>
+          <option value="30">30 Hz</option>
+        </select>
+      </div>
+      <div class="perf-panel__row">
+        <label for="movement-mode">Movement Math</label>
+        <select id="movement-mode">
+          <option value="precompute">Precompute</option>
+          <option value="simplify">Simplify</option>
+        </select>
+      </div>
+      <div class="perf-panel__row">
+        <label for="behavior-detail">Behavior Detail</label>
+        <select id="behavior-detail">
+          <option value="full">Full</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="perf-panel__row">
+        <label for="size-profile">Ant Size Profile</label>
+        <select id="size-profile">
+          <option value="original">Original</option>
+          <option value="compact">80% / 60% grasping</option>
+        </select>
+      </div>
     </div>
     <div class="perf-panel__controls">
+      <button id="respawn-button" type="button">Respawn</button>
       <button id="step-button" type="button">Step Once</button>
       <button id="reset-metrics" type="button">Reset Metrics</button>
+      <button id="apply-layout" type="button">Apply Layout</button>
     </div>
     <div class="perf-panel__stats">
       <span>FPS</span><span id="stat-fps">0</span>
@@ -166,9 +214,14 @@
       <span>Sim mode</span><span id="stat-sim-mode">Running</span>
       <span>Ants</span><span id="stat-ant-count">0</span>
       <span>Sample window</span><span id="stat-sample-window">0.0s</span>
+      <span>Layout</span><span id="stat-layout-mode">Grounded</span>
+      <span>Sim Hz</span><span id="stat-sim-hz">60</span>
+      <span>Movement</span><span id="stat-movement-mode">Precompute</span>
+      <span>Detail</span><span id="stat-detail-mode">Full</span>
+      <span>Size</span><span id="stat-size-mode">Original</span>
     </div>
     <div class="perf-panel__hint">
-      Compare animated vs static with the same ant count. Pause and step to isolate rendering from movement.
+      Use spread layout, lower sim frequency, simplified movement, low detail, and compact sizing to compare where the performance gains are really coming from.
     </div>
   </aside>
   <script type="module" src="./src/main.js"></script>

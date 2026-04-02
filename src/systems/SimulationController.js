@@ -18,27 +18,49 @@ export class SimulationController {
     this.goal = {
       position: { ...SIMULATION_TUNING.exitPosition },
     };
+    this.runtimeSettings = null;
 
-    this.#spawnAnts();
+    this.respawn({ spreadMode: "grounded" });
   }
 
-  update(deltaTime) {
+  update(deltaTime, runtimeSettings) {
     const safeDelta = Math.min(deltaTime, SIMULATION_TUNING.maxDeltaTime);
     this.accumulator += safeDelta;
     this.elapsedTime += safeDelta;
+    this.runtimeSettings = runtimeSettings;
 
-    while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
-      this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep);
-      this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
+    const stepHz = runtimeSettings?.simulationHz === 30 ? 30 : 60;
+    const fixedStep = 1 / stepHz;
+
+    while (this.accumulator >= fixedStep) {
+      this.movementSystem.update(this.ants, fixedStep, runtimeSettings);
+      this.accumulator -= fixedStep;
     }
   }
 
-  #spawnAnts() {
+  step(runtimeSettings) {
+    const stepHz = runtimeSettings?.simulationHz === 30 ? 30 : 60;
+    const fixedStep = 1 / stepHz;
+    this.update(fixedStep, runtimeSettings);
+  }
+
+  respawn(runtimeSettings = this.runtimeSettings || { spreadMode: "grounded" }) {
+    this.runtimeSettings = runtimeSettings;
+    this.accumulator = 0;
     this.ants.length = 0;
 
+    const spreadMode = runtimeSettings.spreadMode || "grounded";
+    const spawnRows = spreadMode === "spread" ? 4 : 2;
+    const spawnWidth = spreadMode === "spread" ? SIMULATION_TUNING.spawnWidth * 3.4 : SIMULATION_TUNING.spawnWidth;
+    const rowSpacing = spreadMode === "spread" ? 18 : 10;
+
     for (let index = 0; index < SIMULATION_TUNING.antCount; index += 1) {
-      const xOffset = randomRange(this.random, -24, SIMULATION_TUNING.spawnWidth);
-      const bandOffset = randomRange(this.random, 0, SIMULATION_TUNING.groundBandHeight);
+      const row = index % spawnRows;
+      const laneOffset = spreadMode === "spread"
+        ? ((index / spawnRows) % 2) * 8
+        : 0;
+      const xOffset = randomRange(this.random, -24, spawnWidth) + laneOffset;
+      const groundOffset = row * rowSpacing + randomRange(this.random, 0, SIMULATION_TUNING.groundBandHeight * 0.35);
       const visualState = ANT_TUNING.visualStateCycle[index % ANT_TUNING.visualStateCycle.length];
       const initialDirection = this.random() > 0.35 ? 1 : -1;
 
@@ -46,7 +68,7 @@ export class SimulationController {
         id: index,
         position: {
           x: this.queen.position.x + xOffset,
-          y: SIMULATION_TUNING.groundY + bandOffset,
+          y: SIMULATION_TUNING.groundY + groundOffset,
         },
         movementProfile: {
           forwardBias: randomRange(this.random, 0.92, 1.08),
@@ -63,7 +85,7 @@ export class SimulationController {
             ANT_TUNING.steeringImpulseMax
           ),
           wanderStrength: randomRange(this.random, 0.45, 1),
-          groundY: SIMULATION_TUNING.groundY + bandOffset,
+          groundY: SIMULATION_TUNING.groundY + groundOffset,
           postureTimer: randomRange(
             this.random,
             ANT_TUNING.postureDurationMin,
