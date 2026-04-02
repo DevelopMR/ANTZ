@@ -211,6 +211,12 @@ function rayRectIntersection(origin, direction, rect, maxDistance) {
   };
 }
 
+function getRayIntersection(origin, direction, object, maxDistance) {
+  return object.shape === "rect"
+    ? rayRectIntersection(origin, direction, object, maxDistance)
+    : rayCircleIntersection(origin, direction, object, maxDistance);
+}
+
 function getObjectCenter(object) {
   if (object.shape === "rect") {
     return {
@@ -415,6 +421,31 @@ export class MapSystem {
     }
 
     return false;
+  }
+
+  castVisionRay(origin, angle, maxDistance, candidates) {
+    const direction = {
+      x: Math.cos(angle),
+      y: Math.sin(angle),
+    };
+    let closestHit = null;
+
+    for (const object of candidates) {
+      const hit = getRayIntersection(origin, direction, object, maxDistance);
+      if (!hit) {
+        continue;
+      }
+
+      if (!closestHit || hit.distance < closestHit.distance) {
+        closestHit = {
+          ...hit,
+          object,
+          angle,
+        };
+      }
+    }
+
+    return closestHit;
   }
 
   sampleFoodScentAt(position) {

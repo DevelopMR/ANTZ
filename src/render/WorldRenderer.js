@@ -127,39 +127,29 @@ export class WorldRenderer {
 
   #drawSensorDebug() {
     const ant = this.simulation.ants[SENSOR_TUNING.debugAntIndex];
-    if (!ant || !ant.sensorState?.wedges) {
+    if (!ant || !ant.sensorState?.rays) {
       return;
     }
 
-    const facingOffset = ant.facing > 0 ? 0 : Math.PI;
     const g = this.sensorOverlay;
     g.clear();
 
-    const visibleObjects = ant.sensorState.debug?.visibleObjects ?? [];
-    for (const object of visibleObjects) {
-      const markerColor = sensorScalarToHex(object.colorScalar);
-      g.lineStyle(1, markerColor, 0.16);
-      g.moveTo(ant.position.x, ant.position.y - 10);
-      g.lineTo(object.x, object.y);
-      g.beginFill(markerColor, 0.42);
-      g.drawCircle(object.centerX, object.centerY, 2.2);
-      g.endFill();
-    }
+    for (const ray of ant.sensorState.rays) {
+      const endPoint = ray.hit
+        ? ray.hit.point
+        : {
+            x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
+            y: ant.position.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
+          };
+      const lineColor = ray.hit ? sensorScalarToHex(ray.colorScalar) : 0x81725c;
 
-    for (const wedge of ant.sensorState.wedges) {
-      const worldAngle = wedge.localAngle + facingOffset;
-      const endPoint = wedge.closestPoint ?? {
-        x: ant.position.x + Math.cos(worldAngle) * SENSOR_TUNING.maxDistance,
-        y: ant.position.y + Math.sin(worldAngle) * SENSOR_TUNING.maxDistance,
-      };
-      const lineColor = sensorScalarToHex(wedge.colorScalar);
-      g.lineStyle(2, lineColor, wedge.closestPoint ? 0.68 : 0.18);
+      g.lineStyle(1, lineColor, ray.hit ? 0.58 : 0.18);
       g.moveTo(ant.position.x, ant.position.y - 10);
       g.lineTo(endPoint.x, endPoint.y);
 
-      if (wedge.closestPoint) {
-        g.beginFill(lineColor, 0.9);
-        g.drawCircle(endPoint.x, endPoint.y, 2.6);
+      if (ray.hit) {
+        g.beginFill(lineColor, 0.82);
+        g.drawCircle(endPoint.x, endPoint.y, 2.2);
         g.endFill();
       }
     }

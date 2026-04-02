@@ -2,6 +2,7 @@ import { SENSOR_TUNING } from "../config/tuning.js";
 
 const FULL_CIRCLE = Math.PI * 2;
 const HALF_WEDGE_SPAN = Math.PI / SENSOR_TUNING.wedgeCount;
+const WEDGE_SPAN = FULL_CIRCLE / SENSOR_TUNING.wedgeCount;
 
 function normalizeAngle(angle) {
   while (angle < 0) {
@@ -40,7 +41,24 @@ function getWedgeIndex(localAngle) {
   return bestDifference <= HALF_WEDGE_SPAN + 0.001 ? bestIndex : null;
 }
 
+function getRayOffsets() {
+  const rayOffsets = [];
+  const rayCount = SENSOR_TUNING.raysPerWedge;
+  const step = WEDGE_SPAN / rayCount;
+  const start = -HALF_WEDGE_SPAN + step * 0.5;
+
+  for (let index = 0; index < rayCount; index += 1) {
+    rayOffsets.push(start + step * index);
+  }
+
+  return rayOffsets;
+}
+
 export class SensorSystem {
+  constructor() {
+    this.rayOffsets = getRayOffsets();
+  }
+
   update(ants, mapSystem, queen) {
     const dynamicObjects = mapSystem.createDynamicSensorObjects(ants, queen);
     const dynamicIndex = mapSystem.buildDynamicSensorIndex(dynamicObjects);
@@ -55,6 +73,9 @@ export class SensorSystem {
     const staticCandidates = mapSystem.getStaticSensorCandidates(ant.position, SENSOR_TUNING.maxDistance);
     const dynamicCandidates = mapSystem.getDynamicSensorCandidates(dynamicIndex, ant.position, SENSOR_TUNING.maxDistance);
     const nearbyWalls = staticCandidates.filter((object) => object.occludesVision);
+    const candidates = [...staticCandidates, ...dynamicCandidates].filter(
+      (object) => !(object.sourceType === "ant" && object.sourceId === ant.id)
+    );
     const wedgeData = Array.from({ length: SENSOR_TUNING.wedgeCount }, (_, index) => ({
       index,
       name: SENSOR_TUNING.wedgeNames[index],
@@ -66,12 +87,9 @@ export class SensorSystem {
       closestObjectType: null,
     }));
     const visibleObjects = [];
+    const rays = [];
 
-    for (const object of [...staticCandidates, ...dynamicCandidates]) {
-      if (object.sourceType === "ant" && object.sourceId === ant.id) {
-        continue;
-      }
-
+    for (const object of candidates) {
       const { nearestPoint, distance } = mapSystem.getDistanceToObject(ant.position, object);
       if (distance > SENSOR_TUNING.maxDistance) {
         continue;
@@ -130,6 +148,25 @@ export class SensorSystem {
       }
     }
 
+    for (let wedgeIndex = 0; wedgeIndex < SENSOR_TUNING.wedgeCount; wedgeIndex += 1) {
+      const wedgeCenter = SENSOR_TUNING.wedgeCenters[wedgeIndex];
+
+      for (let rayIndex = 0; rayIndex < this.rayOffsets.length; rayIndex += 1) {
+        const localAngle = normalizeAngle(wedgeCenter + this.rayOffsets[rayIndex]);
+        const worldAngle = normalizeAngle(localAngle + facingOffset);
+        const hit = mapSystem.castVisionRay(ant.position, worldAngle, SENSOR_TUNING.maxDistance, candidates);
+
+        rays.push({
+          wedgeIndex,
+          rayIndex,
+          localAngle,
+          angle: worldAngle,
+          hit,
+          colorScalar: hit ? hit.object.sensorColorScalar : null,
+        });
+      }
+    }
+
     const wedges = wedgeData.map((wedge) => ({
       index: wedge.index,
       name: wedge.name,
@@ -146,7 +183,7 @@ export class SensorSystem {
 
     ant.sensorState = {
       wedges,
-      rays: [],
+      rays,
       debug: {
         visibleObjects,
       },
