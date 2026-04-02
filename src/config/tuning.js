@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 40,
+  antCount: 1,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -52,10 +52,10 @@ export const SENSOR_TUNING = {
   wedgeCenters: [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3],
   wedgeNames: ["front", "front_up", "back_up", "back", "back_down", "front_down"],
   colorRange: {
-    obstacle: 0.15,
-    ant: 0.45,
-    queen: 0.72,
     food: 1,
+    queen: 0.45,
+    ant: -0.1,
+    obstacle: -0.65,
   },
   localFoodScentRange: 220,
   antSenseRadius: 10,

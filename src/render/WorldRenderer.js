@@ -4,16 +4,16 @@ import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
 function sensorScalarToHex(value) {
-  if (value >= 0.9) {
+  if (value >= 0.8) {
     return 0x5f9b42;
   }
-  if (value >= 0.6) {
+  if (value >= 0.2) {
     return 0xa53a28;
   }
-  if (value >= 0.3) {
+  if (value >= -0.35) {
     return 0x2a2119;
   }
-  if (value > 0) {
+  if (value > -1) {
     return 0x8f6a3d;
   }
   return 0x81725c;
