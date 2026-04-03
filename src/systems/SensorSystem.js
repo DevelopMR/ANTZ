@@ -23,7 +23,7 @@ function shortestAngleDifference(a, b) {
 }
 
 function getFacingOffset(ant) {
-  return ant.facing > 0 ? 0 : Math.PI;
+  return ant.facing > 0 ? Math.PI : 0;
 }
 
 function getWedgeIndex(localAngle) {

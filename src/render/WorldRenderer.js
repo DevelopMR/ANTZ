@@ -133,7 +133,7 @@ export class WorldRenderer {
       return;
     }
 
-    const facingOffset = ant.facing > 0 ? 0 : Math.PI;
+    const facingOffset = ant.facing > 0 ? Math.PI : 0;
     const g = this.sensorOverlay;
     g.clear();
 
