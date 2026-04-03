@@ -6,17 +6,17 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project is currently in an early prototype stage around Phase 2:
+The project is currently at the end of Phase 2:
 - side-view ant presentation
 - lower-left colony spawn area
 - ground-bound ant movement prototype
 - multiple ant visual states
 - PixiJS rendering with a sprite-atlas ant pipeline
 - side-view obstacle map with walls, pegs, ground, queen, and early food nodes
-- 360-degree local sensing aggregated into 6 wedges
-- wedge outputs built from closest visible object distance plus averaged color-range scalar
+- ray-driven local sensing aggregated into 6 fixed world-clock wedges
+- wedge outputs built from closest ray-hit distance plus averaged danger-range color scalar
 - local social sensing that includes nearby ants without global map knowledge
-- sensor debug visualization for a tracked ant
+- sensor debug visualization for a tracked ant, including ray hits, wedge dots, and wedge census labels
 - basic sensor-driven steering demo code
 
 Not implemented yet:
@@ -63,15 +63,23 @@ http://localhost:8000
 
 The current build intentionally avoids global map knowledge for the ants.
 
-Ant perception is currently being shaped around local-only inputs such as:
-- 6 wedges around local facing direction
-- closest visible-object proximity per wedge
-- averaged wedge color-range scalar using visible hits only
+Ant perception is currently shaped around local-only inputs such as:
+- 6 fixed wedges in world-clock order: `1, 3, 5, 7, 9, 11`
+- 3 sensing rays per wedge conceptually: left border, center, right border
+- closest ray-hit distance per wedge
+- averaged wedge danger-range scalar from weighted ray tallies
 - nondirectional local food scent scalar
 - nondirectional pheromone placeholder scalar
 - small scalar body-state inputs
 
-Static walls are the only vision occluders at the moment. Pegs, food, queen, and nearby ants all contribute to wedge color averaging when they fall into a visible wedge.
+The current V2 sensor rules are:
+- wedge orientation does not rotate or flip with ant display direction
+- border-ray hits contribute to both adjacent wedges
+- center-ray hits contribute more strongly to their wedge
+- rays continue through non-occluding objects and stop at the first occluding object
+- only ground and walls occlude vision
+- occluders still contribute to wedge color before ending the ray
+- only nearby ants are queried dynamically for sensing efficiency
 
 ## Project Structure
 
