@@ -3,6 +3,7 @@ import { SENSOR_TUNING } from "../config/tuning.js";
 const FULL_CIRCLE = Math.PI * 2;
 const WEDGE_SPAN = FULL_CIRCLE / SENSOR_TUNING.wedgeCount;
 const HALF_WEDGE_SPAN = WEDGE_SPAN * 0.5;
+const SENSOR_ORIGIN_Y_OFFSET = -10;
 
 function normalizeAngle(angle) {
   while (angle < 0) {
@@ -52,6 +53,33 @@ function createEmptyWedge(index) {
     closestDistance: null,
     closestPoint: null,
     closestObjectType: null,
+    contributors: new Map(),
+  };
+}
+
+function formatObjectLabel(object) {
+  switch (object.type) {
+    case "queen":
+      return "queen";
+    case "food":
+      return object.id || "food";
+    case "ground":
+      return "ground";
+    case "wall":
+      return object.id || "wall";
+    case "peg":
+      return object.id || "peg";
+    case "ant":
+      return object.sourceId !== undefined ? `ant-${object.sourceId}` : object.id || "ant";
+    default:
+      return object.id || object.type || "object";
+  }
+}
+
+function getSensorOrigin(ant) {
+  return {
+    x: ant.position.x,
+    y: ant.position.y + SENSOR_ORIGIN_Y_OFFSET,
   };
 }
 
@@ -64,6 +92,24 @@ function addHitToWedge(wedge, hit, tallyWeight) {
     wedge.closestPoint = hit.point;
     wedge.closestObjectType = hit.object.type;
   }
+
+  const contributorKey = hit.object.id || `${hit.object.type}-${formatObjectLabel(hit.object)}`;
+  if (!wedge.contributors.has(contributorKey)) {
+    wedge.contributors.set(contributorKey, {
+      key: contributorKey,
+      label: formatObjectLabel(hit.object),
+      type: hit.object.type,
+      tallyCount: 0,
+      hitCount: 0,
+      colorScalar: hit.object.sensorColorScalar,
+      closestDistance: hit.distance,
+    });
+  }
+
+  const contributor = wedge.contributors.get(contributorKey);
+  contributor.tallyCount += tallyWeight;
+  contributor.hitCount += 1;
+  contributor.closestDistance = Math.min(contributor.closestDistance, hit.distance);
 }
 
 export class SensorSystem {
@@ -81,10 +127,11 @@ export class SensorSystem {
   }
 
   #sampleAnt(ant, mapSystem, dynamicIndex) {
-    const staticCandidates = mapSystem.getStaticSensorCandidates(ant.position, SENSOR_TUNING.maxDistance);
+    const sensorOrigin = getSensorOrigin(ant);
+    const staticCandidates = mapSystem.getStaticSensorCandidates(sensorOrigin, SENSOR_TUNING.maxDistance);
     const dynamicCandidates = mapSystem.getDynamicSensorCandidates(
       dynamicIndex,
-      ant.position,
+      sensorOrigin,
       SENSOR_TUNING.maxDistance + SENSOR_TUNING.localAntQueryPadding
     );
     const candidates = [...staticCandidates, ...dynamicCandidates].filter(
@@ -95,7 +142,7 @@ export class SensorSystem {
 
     for (let wedgeIndex = 0; wedgeIndex < SENSOR_TUNING.wedgeCount; wedgeIndex += 1) {
       const centerAngle = this.rayLayout.centerAngles[wedgeIndex];
-      const centerHits = mapSystem.getRayHits(ant.position, centerAngle, SENSOR_TUNING.maxDistance, candidates);
+      const centerHits = mapSystem.getRayHits(sensorOrigin, centerAngle, SENSOR_TUNING.maxDistance, candidates);
       const processedCenterHits = this.#collectVisibleHits(centerHits);
       const centerRay = this.#createRayDebug(centerAngle, processedCenterHits, true);
       rays.push(centerRay);
@@ -109,7 +156,7 @@ export class SensorSystem {
 
     for (let borderIndex = 0; borderIndex < SENSOR_TUNING.wedgeCount; borderIndex += 1) {
       const borderAngle = this.rayLayout.borderAngles[borderIndex];
-      const borderHits = mapSystem.getRayHits(ant.position, borderAngle, SENSOR_TUNING.maxDistance, candidates);
+      const borderHits = mapSystem.getRayHits(sensorOrigin, borderAngle, SENSOR_TUNING.maxDistance, candidates);
       const processedBorderHits = this.#collectVisibleHits(borderHits);
       const borderRay = this.#createRayDebug(borderAngle, processedBorderHits, false);
       rays.push(borderRay);
@@ -135,9 +182,16 @@ export class SensorSystem {
         objectCount: wedge.tallyCount,
         closestPoint: wedge.closestPoint,
         closestObjectType: wedge.closestObjectType,
+        contributors: Array.from(wedge.contributors.values()).sort((left, right) => {
+          if (right.tallyCount !== left.tallyCount) {
+            return right.tallyCount - left.tallyCount;
+          }
+          return left.closestDistance - right.closestDistance;
+        }),
       })),
       rays,
       debug: {
+        origin: sensorOrigin,
         visibleObjects: [],
       },
       scalars: {
@@ -179,6 +233,8 @@ export class SensorSystem {
         distance: hit.distance,
         point: hit.point,
         objectType: hit.object.type,
+        objectId: hit.object.id,
+        label: formatObjectLabel(hit.object),
         colorScalar: hit.object.sensorColorScalar,
         occludesVision: hit.object.occludesVision,
       })),

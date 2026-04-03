@@ -1,9 +1,17 @@
-import { Application, Container, Graphics, ParticleContainer } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
+import { Application, Container, Graphics, ParticleContainer, Text } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
 import { MAP_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
 const EMPTY_WEDGE_COLOR = 0x9e9a90;
+const SENSOR_TEXT_STYLE = {
+  fontFamily: "Consolas, 'Courier New', monospace",
+  fontSize: 10,
+  fill: 0x2a2119,
+  stroke: 0xf4e6c7,
+  strokeThickness: 3,
+  lineJoin: "round",
+};
 
 function sensorScalarToHex(value) {
   if (value >= 0.8) {
@@ -21,6 +29,29 @@ function sensorScalarToHex(value) {
   return EMPTY_WEDGE_COLOR;
 }
 
+function formatScalar(value) {
+  return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+}
+
+function formatWedgeCensus(wedge) {
+  if (!wedge.objectCount || !wedge.contributors?.length) {
+    return `${wedge.name}\navg ${formatScalar(0)}\nempty`;
+  }
+
+  const lines = [`${wedge.name}`, `avg ${formatScalar(wedge.colorScalar)}`];
+  const visibleContributors = wedge.contributors.slice(0, 4);
+
+  for (const contributor of visibleContributors) {
+    lines.push(`${contributor.label} x${contributor.tallyCount}`);
+  }
+
+  if (wedge.contributors.length > visibleContributors.length) {
+    lines.push(`+${wedge.contributors.length - visibleContributors.length} more`);
+  }
+
+  return lines.join("\n");
+}
+
 export class WorldRenderer {
   constructor(simulation) {
     this.simulation = simulation;
@@ -29,6 +60,8 @@ export class WorldRenderer {
     this.antSpriteLibrary = null;
     this.antLayer = null;
     this.sensorOverlay = null;
+    this.sensorLabelLayer = null;
+    this.sensorLabelTexts = [];
   }
 
   async initialize(container) {
@@ -125,15 +158,32 @@ export class WorldRenderer {
   #createSensorOverlay() {
     this.sensorOverlay = new Graphics();
     this.worldContainer.addChild(this.sensorOverlay);
+
+    this.sensorLabelLayer = new Container();
+    this.worldContainer.addChild(this.sensorLabelLayer);
+
+    this.sensorLabelTexts = Array.from({ length: SENSOR_TUNING.wedgeCount }, () => {
+      const label = new Text("", SENSOR_TEXT_STYLE);
+      label.visible = false;
+      this.sensorLabelLayer.addChild(label);
+      return label;
+    });
   }
 
   #drawSensorDebug() {
     const ant = this.simulation.ants[SENSOR_TUNING.debugAntIndex];
     if (!ant || !ant.sensorState?.rays || !ant.sensorState?.wedges) {
+      this.sensorOverlay.clear();
+      for (const label of this.sensorLabelTexts) {
+        label.visible = false;
+      }
       return;
     }
 
-    const originY = ant.position.y - 10;
+    const sensorOrigin = ant.sensorState.debug?.origin ?? {
+      x: ant.position.x,
+      y: ant.position.y - 10,
+    };
     const g = this.sensorOverlay;
     g.clear();
 
@@ -141,15 +191,15 @@ export class WorldRenderer {
       const endPoint = ray.hit
         ? ray.hit.point
         : {
-            x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
-            y: originY + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
+            x: sensorOrigin.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
+            y: sensorOrigin.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
           };
       const lineColor = ray.hit ? sensorScalarToHex(ray.colorScalar) : EMPTY_WEDGE_COLOR;
       const lineWidth = ray.isCenterRay ? 1.5 : 1;
       const lineAlpha = ray.hit ? (ray.isCenterRay ? 0.72 : 0.58) : 0.18;
 
       g.lineStyle(lineWidth, lineColor, lineAlpha);
-      g.moveTo(ant.position.x, originY);
+      g.moveTo(sensorOrigin.x, sensorOrigin.y);
       g.lineTo(endPoint.x, endPoint.y);
 
       for (const hit of ray.hits) {
@@ -162,17 +212,34 @@ export class WorldRenderer {
       }
     }
 
-    for (const wedge of ant.sensorState.wedges) {
+    for (let wedgeIndex = 0; wedgeIndex < ant.sensorState.wedges.length; wedgeIndex += 1) {
+      const wedge = ant.sensorState.wedges[wedgeIndex];
       const worldAngle = wedge.localAngle;
       const dotRadius = SENSOR_TUNING.maxDistance - 8;
-      const dotX = ant.position.x + Math.cos(worldAngle) * dotRadius;
-      const dotY = originY + Math.sin(worldAngle) * dotRadius;
+      const dotX = sensorOrigin.x + Math.cos(worldAngle) * dotRadius;
+      const dotY = sensorOrigin.y + Math.sin(worldAngle) * dotRadius;
       const dotColor = wedge.objectCount > 0 ? sensorScalarToHex(wedge.colorScalar) : EMPTY_WEDGE_COLOR;
 
       g.lineStyle(1, 0xf2e6c8, 0.7);
       g.beginFill(dotColor, 0.95);
       g.drawCircle(dotX, dotY, 4.2);
       g.endFill();
+
+      const label = this.sensorLabelTexts[wedgeIndex];
+      const labelOffset = 12;
+      const horizontalDirection = Math.cos(worldAngle) >= 0 ? 1 : -1;
+      const verticalDirection = Math.sin(worldAngle) >= 0 ? 1 : -1;
+
+      label.text = formatWedgeCensus(wedge);
+      label.style = SENSOR_TEXT_STYLE;
+      if (label.anchor) {
+        label.anchor.set(horizontalDirection > 0 ? 0 : 1, verticalDirection > 0 ? 0 : 1);
+      }
+      label.position.set(
+        dotX + Math.cos(worldAngle) * labelOffset + horizontalDirection * 4,
+        dotY + Math.sin(worldAngle) * labelOffset + verticalDirection * 2
+      );
+      label.visible = true;
     }
   }
 
