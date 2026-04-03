@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 1,
+  antCount: 10,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
