@@ -22,8 +22,8 @@ function shortestAngleDifference(a, b) {
   return diff;
 }
 
-function getFacingOffset(ant) {
-  return ant.facing > 0 ? Math.PI : 0;
+function getFacingOffset() {
+  return 0;
 }
 
 function getWedgeIndex(localAngle) {
@@ -74,7 +74,7 @@ export class SensorSystem {
   }
 
   #sampleAnt(ant, mapSystem, dynamicIndex) {
-    const facingOffset = getFacingOffset(ant);
+    const facingOffset = getFacingOffset();
     const staticCandidates = mapSystem.getStaticSensorCandidates(ant.position, SENSOR_TUNING.maxDistance);
     const dynamicCandidates = mapSystem.getDynamicSensorCandidates(dynamicIndex, ant.position, SENSOR_TUNING.maxDistance);
     const nearbyWalls = staticCandidates.filter((object) => object.occludesVision);
