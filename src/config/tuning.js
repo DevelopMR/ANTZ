@@ -49,7 +49,7 @@ export const SENSOR_TUNING = {
   debugAntIndex: 0,
   spatialHashCellSize: 96,
   scalarInputCount: 5,
-  wedgeCenters: [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3],
+  wedgeCenters: [0, -Math.PI / 3, (-2 * Math.PI) / 3, Math.PI, (2 * Math.PI) / 3, Math.PI / 3],
   wedgeNames: ["front", "front_up", "back_up", "back", "back_down", "front_down"],
   colorRange: {
     food: 1,

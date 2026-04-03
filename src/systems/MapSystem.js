@@ -371,12 +371,14 @@ export class MapSystem {
 
   getSensorSamplePoints(origin, object) {
     if (object.type === "ground") {
-      const spread = 36;
+      const surfaceY = object.y;
       return [
         this.getNearestPointOnObject(origin, object),
-        { x: clamp(origin.x - spread, 0, WORLD_WIDTH), y: object.y },
-        { x: clamp(origin.x, 0, WORLD_WIDTH), y: object.y },
-        { x: clamp(origin.x + spread, 0, WORLD_WIDTH), y: object.y },
+        { x: clamp(origin.x - 18, 0, WORLD_WIDTH), y: surfaceY + 20 },
+        { x: clamp(origin.x, 0, WORLD_WIDTH), y: surfaceY + 20 },
+        { x: clamp(origin.x + 18, 0, WORLD_WIDTH), y: surfaceY + 20 },
+        { x: clamp(origin.x - 40, 0, WORLD_WIDTH), y: surfaceY + 10 },
+        { x: clamp(origin.x + 40, 0, WORLD_WIDTH), y: surfaceY + 10 },
       ];
     }
 
@@ -384,6 +386,8 @@ export class MapSystem {
       return [
         this.getNearestPointOnObject(origin, object),
         this.getObjectCenter(object),
+        { x: object.x - object.radius, y: object.y },
+        { x: object.x + object.radius, y: object.y },
       ];
     }
 

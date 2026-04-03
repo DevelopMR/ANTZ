@@ -54,6 +54,11 @@ function getRayOffsets() {
   return rayOffsets;
 }
 
+function getSampleWeight(distance) {
+  const normalized = Math.max(0, 1 - distance / SENSOR_TUNING.maxDistance);
+  return normalized * normalized;
+}
+
 export class SensorSystem {
   constructor() {
     this.rayOffsets = getRayOffsets();
@@ -80,11 +85,12 @@ export class SensorSystem {
       index,
       name: SENSOR_TUNING.wedgeNames[index],
       localAngle: SENSOR_TUNING.wedgeCenters[index],
-      hitCount: 0,
-      colorSum: 0,
+      colorWeightSum: 0,
+      weightedColorSum: 0,
       closestDistance: null,
       closestPoint: null,
       closestObjectType: null,
+      contributingObjects: new Set(),
     }));
     const visibleObjects = [];
     const rays = [];
@@ -115,9 +121,20 @@ export class SensorSystem {
         const worldAngle = normalizeAngle(Math.atan2(dy, dx));
         const localAngle = normalizeAngle(worldAngle - facingOffset);
         const wedgeIndex = getWedgeIndex(localAngle);
-        if (wedgeIndex !== null) {
-          wedgeIndices.add(wedgeIndex);
+        if (wedgeIndex === null) {
+          continue;
         }
+
+        const weight = getSampleWeight(sampleDistance);
+        if (weight <= 0) {
+          continue;
+        }
+
+        const wedge = wedgeData[wedgeIndex];
+        wedge.weightedColorSum += object.sensorColorScalar * weight;
+        wedge.colorWeightSum += weight;
+        wedge.contributingObjects.add(object.id);
+        wedgeIndices.add(wedgeIndex);
       }
 
       if (wedgeIndices.size === 0) {
@@ -137,9 +154,6 @@ export class SensorSystem {
 
       for (const wedgeIndex of wedgeIndices) {
         const wedge = wedgeData[wedgeIndex];
-        wedge.hitCount += 1;
-        wedge.colorSum += object.sensorColorScalar;
-
         if (wedge.closestDistance === null || distance < wedge.closestDistance) {
           wedge.closestDistance = distance;
           wedge.closestPoint = nearestPoint;
@@ -175,8 +189,8 @@ export class SensorSystem {
         ? 0
         : 1 - wedge.closestDistance / SENSOR_TUNING.maxDistance,
       closestDistance: wedge.closestDistance,
-      colorScalar: wedge.hitCount > 0 ? wedge.colorSum / wedge.hitCount : 0,
-      objectCount: wedge.hitCount,
+      colorScalar: wedge.colorWeightSum > 0 ? wedge.weightedColorSum / wedge.colorWeightSum : 0,
+      objectCount: wedge.contributingObjects.size,
       closestPoint: wedge.closestPoint,
       closestObjectType: wedge.closestObjectType,
     }));
