@@ -30,15 +30,15 @@ function createRayLayout() {
 }
 
 function getCenterRayContribution(wedgeIndex) {
-  return [{ wedgeIndex, tallyWeight: 2 }];
+  return [{ wedgeIndex, tallyWeight: SENSOR_TUNING.centerRayTallyWeight }];
 }
 
 function getBorderRayContribution(borderIndex) {
   const leftWedge = borderIndex;
   const rightWedge = (borderIndex - 1 + SENSOR_TUNING.wedgeCount) % SENSOR_TUNING.wedgeCount;
   return [
-    { wedgeIndex: leftWedge, tallyWeight: 1 },
-    { wedgeIndex: rightWedge, tallyWeight: 1 },
+    { wedgeIndex: leftWedge, tallyWeight: SENSOR_TUNING.borderRayTallyWeight },
+    { wedgeIndex: rightWedge, tallyWeight: SENSOR_TUNING.borderRayTallyWeight },
   ];
 }
 
@@ -101,7 +101,9 @@ export class SensorSystem {
       rays.push(centerRay);
 
       for (const hit of processedCenterHits.visibleHits) {
-        addHitToWedge(wedges[wedgeIndex], hit, 2);
+        for (const contribution of getCenterRayContribution(wedgeIndex)) {
+          addHitToWedge(wedges[contribution.wedgeIndex], hit, contribution.tallyWeight);
+        }
       }
     }
 
@@ -182,10 +184,10 @@ export class SensorSystem {
       })),
       hit: terminalHit
         ? {
-          distance: terminalHit.distance,
-          point: terminalHit.point,
-          object: terminalHit.object,
-        }
+            distance: terminalHit.distance,
+            point: terminalHit.point,
+            object: terminalHit.object,
+          }
         : null,
       colorScalar: terminalHit ? terminalHit.object.sensorColorScalar : null,
     };
