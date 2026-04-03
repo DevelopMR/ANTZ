@@ -133,7 +133,6 @@ export class WorldRenderer {
       return;
     }
 
-    const facingOffset = 0;
     const g = this.sensorOverlay;
     g.clear();
 
@@ -141,24 +140,26 @@ export class WorldRenderer {
       const endPoint = ray.hit
         ? ray.hit.point
         : {
-            x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
-            y: ant.position.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
-          };
+          x: ant.position.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
+          y: ant.position.y - 10 + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
+        };
       const lineColor = ray.hit ? sensorScalarToHex(ray.colorScalar) : EMPTY_WEDGE_COLOR;
+      const lineWidth = ray.isCenterRay ? 1.5 : 1;
+      const lineAlpha = ray.hit ? (ray.isCenterRay ? 0.72 : 0.58) : 0.18;
 
-      g.lineStyle(1, lineColor, ray.hit ? 0.58 : 0.18);
+      g.lineStyle(lineWidth, lineColor, lineAlpha);
       g.moveTo(ant.position.x, ant.position.y - 10);
       g.lineTo(endPoint.x, endPoint.y);
 
       if (ray.hit) {
         g.beginFill(lineColor, 0.82);
-        g.drawCircle(endPoint.x, endPoint.y, 2.2);
+        g.drawCircle(ray.hit.point.x, ray.hit.point.y, ray.isCenterRay ? 2.5 : 2.1);
         g.endFill();
       }
     }
 
     for (const wedge of ant.sensorState.wedges) {
-      const worldAngle = wedge.localAngle + facingOffset;
+      const worldAngle = wedge.localAngle;
       const dotRadius = SENSOR_TUNING.maxDistance - 8;
       const dotX = ant.position.x + Math.cos(worldAngle) * dotRadius;
       const dotY = ant.position.y - 10 + Math.sin(worldAngle) * dotRadius;

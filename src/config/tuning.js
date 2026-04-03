@@ -44,13 +44,13 @@ export const ANT_TUNING = {
 
 export const SENSOR_TUNING = {
   wedgeCount: 6,
-  raysPerWedge: 2,
+  raysPerWedge: 3,
   maxDistance: 110,
   debugAntIndex: 0,
   spatialHashCellSize: 96,
   scalarInputCount: 5,
-  wedgeCenters: [0, -Math.PI / 3, (-2 * Math.PI) / 3, Math.PI, (2 * Math.PI) / 3, Math.PI / 3],
-  wedgeNames: ["front", "front_up", "back_up", "back", "back_down", "front_down"],
+  wedgeCenters: [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3],
+  wedgeNames: ["right", "down_right", "down_left", "left", "up_left", "up_right"],
   colorRange: {
     food: 1,
     queen: 0.45,
@@ -60,6 +60,7 @@ export const SENSOR_TUNING = {
   localFoodScentRange: 220,
   antSenseRadius: 10,
   queenSenseRadius: 20,
+  localAntQueryPadding: 16,
 };
 
 export const MAP_TUNING = {

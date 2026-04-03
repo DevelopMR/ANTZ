@@ -1,8 +1,8 @@
 import { SENSOR_TUNING } from "../config/tuning.js";
 
 const FULL_CIRCLE = Math.PI * 2;
-const HALF_WEDGE_SPAN = Math.PI / SENSOR_TUNING.wedgeCount;
 const WEDGE_SPAN = FULL_CIRCLE / SENSOR_TUNING.wedgeCount;
+const HALF_WEDGE_SPAN = WEDGE_SPAN * 0.5;
 
 function normalizeAngle(angle) {
   while (angle < 0) {
@@ -14,54 +14,61 @@ function normalizeAngle(angle) {
   return angle;
 }
 
-function shortestAngleDifference(a, b) {
-  let diff = normalizeAngle(a - b);
-  if (diff > Math.PI) {
-    diff -= FULL_CIRCLE;
-  }
-  return diff;
-}
+function createRayLayout() {
+  const borderAngles = [];
+  const centerAngles = [];
 
-function getFacingOffset() {
-  return 0;
-}
-
-function getWedgeIndex(localAngle) {
-  let bestIndex = 0;
-  let bestDifference = Number.POSITIVE_INFINITY;
-
-  for (let index = 0; index < SENSOR_TUNING.wedgeCenters.length; index += 1) {
-    const difference = Math.abs(shortestAngleDifference(localAngle, SENSOR_TUNING.wedgeCenters[index]));
-    if (difference < bestDifference) {
-      bestDifference = difference;
-      bestIndex = index;
-    }
+  for (let index = 0; index < SENSOR_TUNING.wedgeCount; index += 1) {
+    centerAngles.push(normalizeAngle(SENSOR_TUNING.wedgeCenters[index]));
+    borderAngles.push(normalizeAngle(SENSOR_TUNING.wedgeCenters[index] - HALF_WEDGE_SPAN));
   }
 
-  return bestDifference <= HALF_WEDGE_SPAN + 0.001 ? bestIndex : null;
+  return {
+    borderAngles,
+    centerAngles,
+  };
 }
 
-function getRayOffsets() {
-  const rayOffsets = [];
-  const rayCount = SENSOR_TUNING.raysPerWedge;
-  const step = WEDGE_SPAN / rayCount;
-  const start = -HALF_WEDGE_SPAN + step * 0.5;
+function getCenterRayContribution(wedgeIndex) {
+  return [{ wedgeIndex, tallyWeight: 2 }];
+}
 
-  for (let index = 0; index < rayCount; index += 1) {
-    rayOffsets.push(start + step * index);
+function getBorderRayContribution(borderIndex) {
+  const leftWedge = borderIndex;
+  const rightWedge = (borderIndex - 1 + SENSOR_TUNING.wedgeCount) % SENSOR_TUNING.wedgeCount;
+  return [
+    { wedgeIndex: leftWedge, tallyWeight: 1 },
+    { wedgeIndex: rightWedge, tallyWeight: 1 },
+  ];
+}
+
+function createEmptyWedge(index) {
+  return {
+    index,
+    name: SENSOR_TUNING.wedgeNames[index],
+    localAngle: SENSOR_TUNING.wedgeCenters[index],
+    tallyCount: 0,
+    colorTallySum: 0,
+    closestDistance: null,
+    closestPoint: null,
+    closestObjectType: null,
+  };
+}
+
+function addHitToWedge(wedge, hit, tallyWeight) {
+  wedge.colorTallySum += hit.object.sensorColorScalar * tallyWeight;
+  wedge.tallyCount += tallyWeight;
+
+  if (wedge.closestDistance === null || hit.distance < wedge.closestDistance) {
+    wedge.closestDistance = hit.distance;
+    wedge.closestPoint = hit.point;
+    wedge.closestObjectType = hit.object.type;
   }
-
-  return rayOffsets;
-}
-
-function getSampleWeight(distance) {
-  const normalized = Math.max(0, 1 - distance / SENSOR_TUNING.maxDistance);
-  return normalized * normalized;
 }
 
 export class SensorSystem {
   constructor() {
-    this.rayOffsets = getRayOffsets();
+    this.rayLayout = createRayLayout();
   }
 
   update(ants, mapSystem, queen) {
@@ -74,132 +81,62 @@ export class SensorSystem {
   }
 
   #sampleAnt(ant, mapSystem, dynamicIndex) {
-    const facingOffset = getFacingOffset();
     const staticCandidates = mapSystem.getStaticSensorCandidates(ant.position, SENSOR_TUNING.maxDistance);
-    const dynamicCandidates = mapSystem.getDynamicSensorCandidates(dynamicIndex, ant.position, SENSOR_TUNING.maxDistance);
-    const nearbyWalls = staticCandidates.filter((object) => object.occludesVision);
+    const dynamicCandidates = mapSystem.getDynamicSensorCandidates(
+      dynamicIndex,
+      ant.position,
+      SENSOR_TUNING.maxDistance + SENSOR_TUNING.localAntQueryPadding
+    );
     const candidates = [...staticCandidates, ...dynamicCandidates].filter(
       (object) => !(object.sourceType === "ant" && object.sourceId === ant.id)
     );
-    const wedgeData = Array.from({ length: SENSOR_TUNING.wedgeCount }, (_, index) => ({
-      index,
-      name: SENSOR_TUNING.wedgeNames[index],
-      localAngle: SENSOR_TUNING.wedgeCenters[index],
-      colorWeightSum: 0,
-      weightedColorSum: 0,
-      closestDistance: null,
-      closestPoint: null,
-      closestObjectType: null,
-      contributingObjects: new Set(),
-    }));
-    const visibleObjects = [];
+    const wedges = Array.from({ length: SENSOR_TUNING.wedgeCount }, (_, index) => createEmptyWedge(index));
     const rays = [];
 
-    for (const object of candidates) {
-      const { nearestPoint, distance } = mapSystem.getDistanceToObject(ant.position, object);
-      if (distance > SENSOR_TUNING.maxDistance) {
-        continue;
-      }
-
-      const occluded = object.occludesVision
-        ? false
-        : mapSystem.isWallOccluding(ant.position, nearestPoint, distance, nearbyWalls);
-
-      if (occluded) {
-        continue;
-      }
-
-      const wedgeIndices = new Set();
-      for (const samplePoint of mapSystem.getSensorSamplePoints(ant.position, object)) {
-        const dx = samplePoint.x - ant.position.x;
-        const dy = samplePoint.y - ant.position.y;
-        const sampleDistance = Math.hypot(dx, dy);
-        if (sampleDistance === 0 || sampleDistance > SENSOR_TUNING.maxDistance) {
-          continue;
-        }
-
-        const worldAngle = normalizeAngle(Math.atan2(dy, dx));
-        const localAngle = normalizeAngle(worldAngle - facingOffset);
-        const wedgeIndex = getWedgeIndex(localAngle);
-        if (wedgeIndex === null) {
-          continue;
-        }
-
-        const weight = getSampleWeight(sampleDistance);
-        if (weight <= 0) {
-          continue;
-        }
-
-        const wedge = wedgeData[wedgeIndex];
-        wedge.weightedColorSum += object.sensorColorScalar * weight;
-        wedge.colorWeightSum += weight;
-        wedge.contributingObjects.add(object.id);
-        wedgeIndices.add(wedgeIndex);
-      }
-
-      if (wedgeIndices.size === 0) {
-        continue;
-      }
-
-      visibleObjects.push({
-        type: object.type,
-        x: nearestPoint.x,
-        y: nearestPoint.y,
-        centerX: nearestPoint.x,
-        centerY: nearestPoint.y,
-        colorScalar: object.sensorColorScalar,
-        distance,
-        wedges: [...wedgeIndices],
-      });
-
-      for (const wedgeIndex of wedgeIndices) {
-        const wedge = wedgeData[wedgeIndex];
-        if (wedge.closestDistance === null || distance < wedge.closestDistance) {
-          wedge.closestDistance = distance;
-          wedge.closestPoint = nearestPoint;
-          wedge.closestObjectType = object.type;
-        }
-      }
-    }
-
     for (let wedgeIndex = 0; wedgeIndex < SENSOR_TUNING.wedgeCount; wedgeIndex += 1) {
-      const wedgeCenter = SENSOR_TUNING.wedgeCenters[wedgeIndex];
+      const centerAngle = this.rayLayout.centerAngles[wedgeIndex];
+      const centerHits = mapSystem.getRayHits(ant.position, centerAngle, SENSOR_TUNING.maxDistance, candidates);
+      const processedCenterHits = this.#collectVisibleHits(centerHits);
+      const centerRay = this.#createRayDebug(centerAngle, processedCenterHits, true);
+      rays.push(centerRay);
 
-      for (let rayIndex = 0; rayIndex < this.rayOffsets.length; rayIndex += 1) {
-        const localAngle = normalizeAngle(wedgeCenter + this.rayOffsets[rayIndex]);
-        const worldAngle = normalizeAngle(localAngle + facingOffset);
-        const hit = mapSystem.castVisionRay(ant.position, worldAngle, SENSOR_TUNING.maxDistance, candidates);
-
-        rays.push({
-          wedgeIndex,
-          rayIndex,
-          localAngle,
-          angle: worldAngle,
-          hit,
-          colorScalar: hit ? hit.object.sensorColorScalar : null,
-        });
+      for (const hit of processedCenterHits.visibleHits) {
+        addHitToWedge(wedges[wedgeIndex], hit, 2);
       }
     }
 
-    const wedges = wedgeData.map((wedge) => ({
-      index: wedge.index,
-      name: wedge.name,
-      localAngle: wedge.localAngle,
-      proximity: wedge.closestDistance === null
-        ? 0
-        : 1 - wedge.closestDistance / SENSOR_TUNING.maxDistance,
-      closestDistance: wedge.closestDistance,
-      colorScalar: wedge.colorWeightSum > 0 ? wedge.weightedColorSum / wedge.colorWeightSum : 0,
-      objectCount: wedge.contributingObjects.size,
-      closestPoint: wedge.closestPoint,
-      closestObjectType: wedge.closestObjectType,
-    }));
+    for (let borderIndex = 0; borderIndex < SENSOR_TUNING.wedgeCount; borderIndex += 1) {
+      const borderAngle = this.rayLayout.borderAngles[borderIndex];
+      const borderHits = mapSystem.getRayHits(ant.position, borderAngle, SENSOR_TUNING.maxDistance, candidates);
+      const processedBorderHits = this.#collectVisibleHits(borderHits);
+      const borderRay = this.#createRayDebug(borderAngle, processedBorderHits, false);
+      rays.push(borderRay);
+
+      const contributions = getBorderRayContribution(borderIndex);
+      for (const hit of processedBorderHits.visibleHits) {
+        for (const contribution of contributions) {
+          addHitToWedge(wedges[contribution.wedgeIndex], hit, contribution.tallyWeight);
+        }
+      }
+    }
 
     ant.sensorState = {
-      wedges,
+      wedges: wedges.map((wedge) => ({
+        index: wedge.index,
+        name: wedge.name,
+        localAngle: wedge.localAngle,
+        proximity: wedge.closestDistance === null
+          ? 0
+          : 1 - wedge.closestDistance / SENSOR_TUNING.maxDistance,
+        closestDistance: wedge.closestDistance,
+        colorScalar: wedge.tallyCount > 0 ? wedge.colorTallySum / wedge.tallyCount : 0,
+        objectCount: wedge.tallyCount,
+        closestPoint: wedge.closestPoint,
+        closestObjectType: wedge.closestObjectType,
+      })),
       rays,
       debug: {
-        visibleObjects,
+        visibleObjects: [],
       },
       scalars: {
         foodScent: mapSystem.sampleFoodScentAt(ant.position),
@@ -208,6 +145,49 @@ export class SensorSystem {
         attached: ant.attached ? 1 : 0,
         connectionCount: Math.min(1, ant.connectionIds.length / 4),
       },
+    };
+  }
+
+  #collectVisibleHits(sortedHits) {
+    const visibleHits = [];
+    let terminalHit = null;
+
+    for (const hit of sortedHits) {
+      visibleHits.push(hit);
+      terminalHit = hit;
+
+      if (hit.object.occludesVision) {
+        break;
+      }
+    }
+
+    return {
+      visibleHits,
+      terminalHit,
+    };
+  }
+
+  #createRayDebug(angle, processedHits, isCenterRay) {
+    const { visibleHits, terminalHit } = processedHits;
+
+    return {
+      angle,
+      isCenterRay,
+      hits: visibleHits.map((hit) => ({
+        distance: hit.distance,
+        point: hit.point,
+        objectType: hit.object.type,
+        colorScalar: hit.object.sensorColorScalar,
+        occludesVision: hit.object.occludesVision,
+      })),
+      hit: terminalHit
+        ? {
+          distance: terminalHit.distance,
+          point: terminalHit.point,
+          object: terminalHit.object,
+        }
+        : null,
+      colorScalar: terminalHit ? terminalHit.object.sensorColorScalar : null,
     };
   }
 }

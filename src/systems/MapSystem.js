@@ -141,7 +141,7 @@ function makeGround(y) {
     width: WORLD_WIDTH,
     height: WORLD_HEIGHT - y,
     climbable: false,
-    occludesVision: false,
+    occludesVision: true,
     color: MAP_TUNING.groundColor,
     sensorColorScalar: SENSOR_TUNING.colorRange.obstacle,
   };
@@ -161,17 +161,17 @@ function rayCircleIntersection(origin, direction, circle, maxDistance) {
   const sqrtDiscriminant = Math.sqrt(discriminant);
   const t1 = (-b - sqrtDiscriminant) / 2;
   const t2 = (-b + sqrtDiscriminant) / 2;
-  const t = t1 > 0 ? t1 : t2 > 0 ? t2 : null;
+  const nearT = t1 > 0 ? t1 : t2 > 0 ? t2 : null;
 
-  if (t === null || t > maxDistance) {
+  if (nearT === null || nearT > maxDistance) {
     return null;
   }
 
   return {
-    distance: t,
+    distance: nearT,
     point: {
-      x: origin.x + direction.x * t,
-      y: origin.y + direction.y * t,
+      x: origin.x + direction.x * nearT,
+      y: origin.y + direction.y * nearT,
     },
   };
 }
@@ -215,20 +215,6 @@ function getRayIntersection(origin, direction, object, maxDistance) {
   return object.shape === "rect"
     ? rayRectIntersection(origin, direction, object, maxDistance)
     : rayCircleIntersection(origin, direction, object, maxDistance);
-}
-
-function getObjectCenter(object) {
-  if (object.shape === "rect") {
-    return {
-      x: object.x + object.width * 0.5,
-      y: object.y + object.height * 0.5,
-    };
-  }
-
-  return {
-    x: object.x,
-    y: object.y,
-  };
 }
 
 function getNearestPointOnRect(origin, rect) {
@@ -355,80 +341,16 @@ export class MapSystem {
     return [queenObject, ...antObjects];
   }
 
-  getNearestPointOnObject(origin, object) {
-    return object.shape === "rect"
-      ? getNearestPointOnRect(origin, object)
-      : getNearestPointOnCircle(origin, object);
-  }
-
   getDistanceToObject(origin, object) {
     return getDistanceToObject(origin, object);
   }
 
-  getObjectCenter(object) {
-    return getObjectCenter(object);
-  }
-
-  getSensorSamplePoints(origin, object) {
-    if (object.type === "ground") {
-      const surfaceY = object.y;
-      return [
-        this.getNearestPointOnObject(origin, object),
-        { x: clamp(origin.x - 18, 0, WORLD_WIDTH), y: surfaceY + 20 },
-        { x: clamp(origin.x, 0, WORLD_WIDTH), y: surfaceY + 20 },
-        { x: clamp(origin.x + 18, 0, WORLD_WIDTH), y: surfaceY + 20 },
-        { x: clamp(origin.x - 40, 0, WORLD_WIDTH), y: surfaceY + 10 },
-        { x: clamp(origin.x + 40, 0, WORLD_WIDTH), y: surfaceY + 10 },
-      ];
-    }
-
-    if (object.shape === "circle") {
-      return [
-        this.getNearestPointOnObject(origin, object),
-        this.getObjectCenter(object),
-        { x: object.x - object.radius, y: object.y },
-        { x: object.x + object.radius, y: object.y },
-      ];
-    }
-
-    return [
-      this.getNearestPointOnObject(origin, object),
-      this.getObjectCenter(object),
-      { x: object.x + object.width * 0.5, y: object.y },
-      { x: object.x + object.width * 0.5, y: object.y + object.height },
-    ];
-  }
-
-  isWallOccluding(origin, targetPoint, targetDistance, nearbyWalls, ignoreWallId = null) {
-    if (targetDistance <= 0) {
-      return false;
-    }
-
-    const direction = {
-      x: (targetPoint.x - origin.x) / targetDistance,
-      y: (targetPoint.y - origin.y) / targetDistance,
-    };
-
-    for (const wall of nearbyWalls) {
-      if (wall.id === ignoreWallId) {
-        continue;
-      }
-
-      const hit = rayRectIntersection(origin, direction, wall, targetDistance);
-      if (hit && hit.distance < targetDistance - 0.75) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  castVisionRay(origin, angle, maxDistance, candidates) {
+  getRayHits(origin, angle, maxDistance, candidates) {
     const direction = {
       x: Math.cos(angle),
       y: Math.sin(angle),
     };
-    let closestHit = null;
+    const hits = [];
 
     for (const object of candidates) {
       const hit = getRayIntersection(origin, direction, object, maxDistance);
@@ -436,16 +358,15 @@ export class MapSystem {
         continue;
       }
 
-      if (!closestHit || hit.distance < closestHit.distance) {
-        closestHit = {
-          ...hit,
-          object,
-          angle,
-        };
-      }
+      hits.push({
+        ...hit,
+        object,
+        angle,
+      });
     }
 
-    return closestHit;
+    hits.sort((left, right) => left.distance - right.distance);
+    return hits;
   }
 
   sampleFoodScentAt(position) {
