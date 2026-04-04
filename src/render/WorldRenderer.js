@@ -6,7 +6,7 @@ import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 const EMPTY_WEDGE_COLOR = 0x9e9a90;
 const SENSOR_TEXT_STYLE = {
   fontFamily: "Consolas, 'Courier New', monospace",
-  fontSize: 10,
+  fontSize: 9,
   fill: 0x2a2119,
   stroke: 0xf4e6c7,
   strokeThickness: 3,
@@ -20,6 +20,11 @@ const BRAIN_TEXT_STYLE = {
   strokeThickness: 4,
   lineJoin: "round",
 };
+const LABEL_MARGIN = 8;
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
 
 function sensorScalarToHex(value) {
   if (value >= 0.8) {
@@ -89,6 +94,32 @@ function formatBrainDebug(ant) {
   lines.push(`intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`);
 
   return lines.join("\n");
+}
+
+function clampLabelToWorld(label) {
+  const anchorX = label.anchor?.x ?? 0;
+  const anchorY = label.anchor?.y ?? 0;
+  const left = label.x - label.width * anchorX;
+  const top = label.y - label.height * anchorY;
+  const right = left + label.width;
+  const bottom = top + label.height;
+
+  let shiftX = 0;
+  let shiftY = 0;
+
+  if (left < LABEL_MARGIN) {
+    shiftX = LABEL_MARGIN - left;
+  } else if (right > WORLD_WIDTH - LABEL_MARGIN) {
+    shiftX = (WORLD_WIDTH - LABEL_MARGIN) - right;
+  }
+
+  if (top < LABEL_MARGIN) {
+    shiftY = LABEL_MARGIN - top;
+  } else if (bottom > WORLD_HEIGHT - LABEL_MARGIN) {
+    shiftY = (WORLD_HEIGHT - LABEL_MARGIN) - bottom;
+  }
+
+  label.position.set(label.x + shiftX, label.y + shiftY);
 }
 
 export class WorldRenderer {
@@ -285,6 +316,7 @@ export class WorldRenderer {
         dotX + Math.cos(worldAngle) * labelOffset + horizontalDirection * 4,
         dotY + Math.sin(worldAngle) * labelOffset + verticalDirection * 2
       );
+      clampLabelToWorld(label);
       label.visible = true;
     }
 

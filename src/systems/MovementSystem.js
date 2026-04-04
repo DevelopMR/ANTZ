@@ -95,3 +95,4 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
+

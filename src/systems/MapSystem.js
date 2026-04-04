@@ -254,6 +254,12 @@ function getDistanceToObject(origin, object) {
   };
 }
 
+function segmentCrossesBand(startX, endX, minX, maxX) {
+  const segmentMin = Math.min(startX, endX);
+  const segmentMax = Math.max(startX, endX);
+  return segmentMax >= minX && segmentMin <= maxX;
+}
+
 export class MapSystem {
   constructor() {
     const groundTop = SIMULATION_TUNING.groundY + 8;
@@ -386,7 +392,7 @@ export class MapSystem {
     return Math.min(1, totalScent);
   }
 
-  constrainHorizontalMovement(ant, nextX) {
+  constrainHorizontalMovement(ant, currentX, nextX) {
     let resolvedX = nextX;
 
     for (const wall of this.walls) {
@@ -399,9 +405,11 @@ export class MapSystem {
 
       const minX = wall.x - ANT_TUNING.collisionRadius;
       const maxX = wall.x + wall.width + ANT_TUNING.collisionRadius;
+      const entersWall = resolvedX >= minX && resolvedX <= maxX;
+      const crossesWall = segmentCrossesBand(currentX, resolvedX, minX, maxX);
 
-      if (resolvedX >= minX && resolvedX <= maxX) {
-        resolvedX = ant.facing > 0 ? minX : maxX;
+      if (entersWall || crossesWall) {
+        resolvedX = ant.velocity.x >= 0 ? minX : maxX;
       }
     }
 
