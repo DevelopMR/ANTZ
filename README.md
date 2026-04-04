@@ -6,7 +6,7 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project is currently at the end of Phase 2:
+The project is currently in Phase 3 wiring work:
 - side-view ant presentation
 - lower-left colony spawn area
 - ground-bound ant movement prototype
@@ -14,13 +14,12 @@ The project is currently at the end of Phase 2:
 - PixiJS rendering with a sprite-atlas ant pipeline
 - side-view obstacle map with walls, pegs, ground, queen, and early food nodes
 - ray-driven local sensing aggregated into 6 fixed world-clock wedges
-- wedge outputs built from closest ray-hit distance plus averaged danger-range color scalar
-- local social sensing that includes nearby ants without global map knowledge
-- sensor debug visualization for a tracked ant, including ray hits, wedge dots, and wedge census labels
-- basic sensor-driven steering demo code
+- per-ant feedforward neural nets with configurable hidden layers
+- explicit brain input assembly from wedge proximity, wedge danger-color, food scent, and pheromone
+- neural control of turn and forward motion
+- tracked-ant debug visualization for both sensor data and brain IO
 
 Not implemented yet:
-- neural control
 - attachment mechanics
 - structural physics and climbing behavior
 - food pickup / carry-return loop
@@ -65,21 +64,18 @@ The current build intentionally avoids global map knowledge for the ants.
 
 Ant perception is currently shaped around local-only inputs such as:
 - 6 fixed wedges in world-clock order: `1, 3, 5, 7, 9, 11`
-- 3 sensing rays per wedge conceptually: left border, center, right border
-- closest ray-hit distance per wedge
-- averaged wedge danger-range scalar from weighted ray tallies
+- 6 closest-object proximity inputs
+- 6 averaged danger-range color inputs
 - nondirectional local food scent scalar
-- nondirectional pheromone placeholder scalar
-- small scalar body-state inputs
+- nondirectional pheromone scalar
 
-The current V2 sensor rules are:
-- wedge orientation does not rotate or flip with ant display direction
-- border-ray hits contribute to both adjacent wedges
-- center-ray hits contribute more strongly to their wedge
-- rays continue through non-occluding objects and stop at the first occluding object
-- only ground and walls occlude vision
-- occluders still contribute to wedge color before ending the ray
-- only nearby ants are queried dynamically for sensing efficiency
+Phase 3 currently wires those sensor values into a feedforward brain with 4 outputs:
+- `turn`
+- `forward`
+- `graspIntent`
+- `interaction`
+
+Only `turn` and `forward` affect movement right now. `graspIntent` and `interaction` are stored as inert runtime intents for later phases.
 
 ## Project Structure
 
@@ -93,13 +89,13 @@ src/
 ```
 
 Key current files:
+- `src/ai/NeuralNet.js`
+- `src/systems/BrainSystem.js`
 - `src/systems/SimulationController.js`
 - `src/systems/MovementSystem.js`
 - `src/systems/MapSystem.js`
 - `src/systems/SensorSystem.js`
 - `src/render/WorldRenderer.js`
-- `src/render/AntView.js`
-- `src/render/AntSpriteLibrary.js`
 - `src/config/tuning.js`
 
 ## Build Roadmap

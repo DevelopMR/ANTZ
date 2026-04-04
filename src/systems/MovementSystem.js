@@ -1,4 +1,4 @@
-import { ANT_TUNING, SENSOR_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, NEURAL_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -13,7 +13,7 @@ export class MovementSystem {
   update(ants, deltaTime, mapSystem) {
     for (const ant of ants) {
       this.#updatePosture(ant, deltaTime);
-      this.#updateSteeringIntent(ant, deltaTime);
+      this.#updateNeuralIntent(ant, deltaTime);
       this.#integrateMotion(ant, deltaTime, mapSystem);
       this.#containWithinWorld(ant);
     }
@@ -32,40 +32,9 @@ export class MovementSystem {
     }
   }
 
-  #updateSteeringIntent(ant, deltaTime) {
-    ant.movement.steeringNoiseTimer -= deltaTime;
-
-    if (ant.movement.steeringNoiseTimer <= 0) {
-      ant.movement.steeringNoiseTimer = this.#randomRange(
-        ANT_TUNING.steeringNoiseIntervalMin,
-        ANT_TUNING.steeringNoiseIntervalMax
-      );
-      ant.movement.steeringTarget = this.#randomRange(
-        ANT_TUNING.steeringImpulseMin,
-        ANT_TUNING.steeringImpulseMax
-      ) * ant.movement.wanderStrength;
-    }
-
-    const wedges = ant.sensorState.wedges;
-    if (!wedges || wedges.length === 0) {
-      ant.movement.desiredDirection += ant.movement.steeringTarget * 0.2 * deltaTime;
-      ant.movement.desiredDirection = clamp(ant.movement.desiredDirection, -1, 1);
-      return;
-    }
-
-    const frontPressure = (wedges[0].proximity + wedges[1].proximity + wedges[5].proximity) / 3;
-    const leftOpen = ((1 - wedges[1].proximity) + (1 - wedges[2].proximity)) * 0.5;
-    const rightOpen = ((1 - wedges[5].proximity) + (1 - wedges[4].proximity)) * 0.5;
-    const leftSignal = ((wedges[1].colorScalar + wedges[2].colorScalar) * 0.5) - SENSOR_TUNING.colorRange.obstacle;
-    const rightSignal = ((wedges[5].colorScalar + wedges[4].colorScalar) * 0.5) - SENSOR_TUNING.colorRange.obstacle;
-    const scentBias = ant.sensorState.scalars.foodScent * 0.06 * ant.facing;
-
-    const opennessBias = (rightOpen - leftOpen) * 0.85;
-    const interestBias = (rightSignal - leftSignal) * 0.55;
-    const obstacleBrake = frontPressure * 1.2;
-    const noiseBias = ant.movement.steeringTarget * 0.11;
-
-    ant.movement.desiredDirection += (opennessBias + interestBias + scentBias - obstacleBrake + noiseBias) * deltaTime;
+  #updateNeuralIntent(ant, deltaTime) {
+    const turnSignal = ant.brainState?.turn ?? 0;
+    ant.movement.desiredDirection += turnSignal * ant.traits.turnResponsiveness * NEURAL_TUNING.turnRate * deltaTime;
     ant.movement.desiredDirection = clamp(ant.movement.desiredDirection, -1, 1);
 
     if (Math.abs(ant.movement.desiredDirection) > 0.05) {
@@ -74,18 +43,20 @@ export class MovementSystem {
   }
 
   #integrateMotion(ant, deltaTime, mapSystem) {
+    const forwardSignal = ant.brainState?.forward ?? 0;
     const postureSpeedScale = ant.visualState === "walking"
       ? 1
       : ant.visualState === "reaching"
-        ? 0.12
+        ? 0.35
         : ant.visualState === "standing"
-          ? 0
-          : 0.03;
+          ? 0.42
+          : 0.18;
 
     const forwardForce =
       ANT_TUNING.forwardDrive *
       ant.traits.forwardBias *
       ant.movement.desiredDirection *
+      forwardSignal *
       postureSpeedScale;
 
     ant.velocity.x += forwardForce * deltaTime;

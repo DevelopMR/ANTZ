@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, ParticleContainer, Text } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
-import { MAP_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
+import { MAP_TUNING, NEURAL_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
@@ -10,6 +10,14 @@ const SENSOR_TEXT_STYLE = {
   fill: 0x2a2119,
   stroke: 0xf4e6c7,
   strokeThickness: 3,
+  lineJoin: "round",
+};
+const BRAIN_TEXT_STYLE = {
+  fontFamily: "Consolas, 'Courier New', monospace",
+  fontSize: 11,
+  fill: 0x2a2119,
+  stroke: 0xf4e6c7,
+  strokeThickness: 4,
   lineJoin: "round",
 };
 
@@ -30,7 +38,8 @@ function sensorScalarToHex(value) {
 }
 
 function formatScalar(value) {
-  return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return safeValue >= 0 ? `+${safeValue.toFixed(2)}` : safeValue.toFixed(2);
 }
 
 function formatWedgeCensus(wedge) {
@@ -52,6 +61,36 @@ function formatWedgeCensus(wedge) {
   return lines.join("\n");
 }
 
+function formatBrainDebug(ant) {
+  const inputs = ant.brainState?.inputs ?? [];
+  const outputs = ant.brainState?.outputs ?? [];
+  const wedgeNames = SENSOR_TUNING.wedgeNames;
+  const lines = [
+    `Tracked ant ${ant.id}`,
+    "Inputs",
+  ];
+
+  for (let index = 0; index < wedgeNames.length; index += 1) {
+    lines.push(`P ${wedgeNames[index]} ${formatScalar(inputs[index] ?? 0)}`);
+  }
+
+  for (let index = 0; index < wedgeNames.length; index += 1) {
+    lines.push(`C ${wedgeNames[index]} ${formatScalar(inputs[index + wedgeNames.length] ?? 0)}`);
+  }
+
+  lines.push(`food scent ${formatScalar(inputs[12] ?? 0)}`);
+  lines.push(`pheromone ${formatScalar(inputs[13] ?? 0)}`);
+  lines.push("Outputs");
+  lines.push(`turn ${formatScalar(outputs[NEURAL_TUNING.turnOutputIndex] ?? 0)}`);
+  lines.push(`forward ${formatScalar(outputs[NEURAL_TUNING.forwardOutputIndex] ?? 0)}`);
+  lines.push(`grasp ${formatScalar(outputs[NEURAL_TUNING.graspOutputIndex] ?? 0)}`);
+  lines.push(`interact ${formatScalar(outputs[NEURAL_TUNING.interactionOutputIndex] ?? 0)}`);
+  lines.push(`intent grasp ${formatScalar(ant.brainState?.graspIntent ?? 0)}`);
+  lines.push(`intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`);
+
+  return lines.join("\n");
+}
+
 export class WorldRenderer {
   constructor(simulation) {
     this.simulation = simulation;
@@ -62,6 +101,7 @@ export class WorldRenderer {
     this.sensorOverlay = null;
     this.sensorLabelLayer = null;
     this.sensorLabelTexts = [];
+    this.brainDebugText = null;
   }
 
   async initialize(container) {
@@ -168,6 +208,10 @@ export class WorldRenderer {
       this.sensorLabelLayer.addChild(label);
       return label;
     });
+
+    this.brainDebugText = new Text("", BRAIN_TEXT_STYLE);
+    this.brainDebugText.position.set(18, 18);
+    this.worldContainer.addChild(this.brainDebugText);
   }
 
   #drawSensorDebug() {
@@ -176,6 +220,9 @@ export class WorldRenderer {
       this.sensorOverlay.clear();
       for (const label of this.sensorLabelTexts) {
         label.visible = false;
+      }
+      if (this.brainDebugText) {
+        this.brainDebugText.text = "";
       }
       return;
     }
@@ -231,7 +278,6 @@ export class WorldRenderer {
       const verticalDirection = Math.sin(worldAngle) >= 0 ? 1 : -1;
 
       label.text = formatWedgeCensus(wedge);
-      label.style = SENSOR_TEXT_STYLE;
       if (label.anchor) {
         label.anchor.set(horizontalDirection > 0 ? 0 : 1, verticalDirection > 0 ? 0 : 1);
       }
@@ -240,6 +286,10 @@ export class WorldRenderer {
         dotY + Math.sin(worldAngle) * labelOffset + verticalDirection * 2
       );
       label.visible = true;
+    }
+
+    if (this.brainDebugText) {
+      this.brainDebugText.text = formatBrainDebug(ant);
     }
   }
 

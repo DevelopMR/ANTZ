@@ -1,5 +1,6 @@
 import { MapSystem } from "./MapSystem.js";
 import { SensorSystem } from "./SensorSystem.js";
+import { BrainSystem } from "./BrainSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
 import { ANT_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
@@ -14,6 +15,7 @@ export class SimulationController {
     this.random = random;
     this.mapSystem = new MapSystem();
     this.sensorSystem = new SensorSystem();
+    this.brainSystem = new BrainSystem();
     this.movementSystem = new MovementSystem(random);
     this.accumulator = 0;
     this.elapsedTime = 0;
@@ -25,6 +27,7 @@ export class SimulationController {
 
     this.#spawnAnts();
     this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
+    this.brainSystem.update(this.ants);
   }
 
   update(deltaTime) {
@@ -34,6 +37,7 @@ export class SimulationController {
 
     while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
       this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
+      this.brainSystem.update(this.ants);
       this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
     }
@@ -59,17 +63,6 @@ export class SimulationController {
           forwardBias: randomRange(this.random, 0.92, 1.08),
           turnResponsiveness: randomRange(this.random, 0.85, 1.15),
           initialDirection,
-          initialNoiseTimer: randomRange(
-            this.random,
-            ANT_TUNING.steeringNoiseIntervalMin,
-            ANT_TUNING.steeringNoiseIntervalMax
-          ),
-          initialSteeringTarget: randomRange(
-            this.random,
-            ANT_TUNING.steeringImpulseMin,
-            ANT_TUNING.steeringImpulseMax
-          ),
-          wanderStrength: randomRange(this.random, 0.45, 1),
           groundY: SIMULATION_TUNING.groundY + groundOffset,
           postureTimer: randomRange(
             this.random,
@@ -83,6 +76,7 @@ export class SimulationController {
           animationOffset: randomRange(this.random, 0, 1),
           frameSeed: randomRange(this.random, 0, 10),
         },
+        random: this.random,
       }));
     }
   }

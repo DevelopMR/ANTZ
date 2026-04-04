@@ -25,10 +25,6 @@ export const ANT_TUNING = {
   spriteHeight: 56,
   maxSpeed: 46,
   forwardDrive: 60,
-  steeringNoiseIntervalMin: 0.45,
-  steeringNoiseIntervalMax: 1.3,
-  steeringImpulseMin: -1,
-  steeringImpulseMax: 1,
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
   collisionRadius: 11,
@@ -48,7 +44,7 @@ export const SENSOR_TUNING = {
   maxDistance: 110,
   debugAntIndex: 0,
   spatialHashCellSize: 96,
-  scalarInputCount: 5,
+  scalarInputCount: 2,
   wedgeCenters: [
     (5 * Math.PI) / 3,
     0,
@@ -70,6 +66,17 @@ export const SENSOR_TUNING = {
   antSenseRadius: 10,
   queenSenseRadius: 20,
   localAntQueryPadding: 16,
+};
+
+export const NEURAL_TUNING = {
+  inputCount: SENSOR_TUNING.wedgeCount * 2 + SENSOR_TUNING.scalarInputCount,
+  hiddenLayers: [12],
+  outputCount: 4,
+  turnOutputIndex: 0,
+  forwardOutputIndex: 1,
+  graspOutputIndex: 2,
+  interactionOutputIndex: 3,
+  turnRate: 2.8,
 };
 
 export const MAP_TUNING = {

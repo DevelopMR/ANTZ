@@ -4,84 +4,76 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 2 - Sensor System
+Phase 3 - Neural Net Wiring
 
 ## Phase Goal
-Establish a stable local-sensing prototype where ants:
-- move in a side-view world from the lower-left colony area
-- perceive nearby geometry and nearby ants using fixed world-clock wedges
-- sample nearest ray-hit distance per wedge
-- sample averaged danger-range scalar per wedge from ray tallies
-- reserve scent and pheromone as separate nondirectional scalar inputs
-- show sensor debug output for inspection
+Wire the finalized Phase 2 sensor outputs directly into each ant's neural net so ants:
+- assemble a local 14-value brain input vector
+- run feedforward inference every simulation step
+- use neural outputs for turn and forward movement
+- store grasp and interaction outputs as future-facing intents
+- expose tracked-ant brain IO alongside the existing sensor debug
 
-No neural decision making, attachment, structural physics, pheromone map logic, or reproduction yet.
+No attachment, food interaction, reward, reproduction, or pheromone-map behavior yet.
 
-## Definition of Done (Phase 2)
-- walls, pegs, ground, queen, and food exist as side-view sensed world objects
-- nearby ants can contribute to sensing without any global coordinates
-- wedges report closest ray-hit distance plus averaged danger-range scalar
-- wedge orientation is fixed to world clock order `1, 3, 5, 7, 9, 11`
-- rays continue through non-occluding objects and stop at the first wall or ground hit
-- occluders still contribute to wedge color before ending the ray
-- sensor data is stored per ant in a future-brain-friendly shape
-- debug visualization makes the sensor model inspectable with rays, wedge dots, and wedge census labels
-- simple procedural steering can react to sensor data
+## Definition of Done (Phase 3)
+- wedge proximity and danger-color inputs feed the brain in world-clock order `1, 3, 5, 7, 9, 11`
+- only `foodScent` and `pheromone` are included as scalar brain inputs
+- the neural net performs a real configurable feedforward pass
+- movement uses neural `turn` and `forward` outputs instead of procedural steering
+- `graspIntent` and `interaction` are stored on each ant without changing gameplay yet
+- tracked-ant debug shows both sensor data and brain IO
 
 ## Explicit Non-Goals (Do NOT implement yet)
-- neural decision making
 - attachment / connection system
-- bridge physics
+- eat / drop interaction logic
 - carry-return behavior
 - reward or evolution systems
-- pheromone simulation
+- pheromone field simulation
 - death / recycling
+- climbing or structural physics
 
 ## Required Hooks for Future Phases
 Leave clean extension points for:
-- neural input assembly
-- food interaction and carry state
-- peg / wall climb rules
-- attachment negotiation
-- pheromone channels in scalar inputs
-- map progression data
-- dead-ant / edible body sensing later
+- attachment negotiation from `graspIntent`
+- food interaction from `interaction`
+- mutation and cloning of neural weights
+- reward and fitness tracking
+- carry-return takeover after food acquisition
+- pheromone scalar becoming a real map sample
 
 ## Current Systems Expected
 At minimum:
-- Ant entity/class
-- SimulationController update loop
-- MapSystem with static-world indexing and local dynamic-ant broad phase
-- SensorSystem with ray-driven wedge aggregation
-- MovementSystem with sensor-driven demo behavior
-- Rendering layer with sensor debug visualization
+- Ant entity/class with `brainState`
+- NeuralNet feedforward module
+- BrainSystem input assembly and inference step
+- SimulationController update order: sensors -> brain -> movement
+- MovementSystem consuming stored neural outputs only
+- Rendering layer with tracked-ant sensor and brain debug
 
 ## Performance Expectations
-- keep per-frame sensor work compact
-- only query nearby ants dynamically for sensing
-- avoid heavy graph work or attachment logic in this phase
-- preserve the sprite-based ant render path
-- maintain readable behavior at current swarm sizes
+- keep per-ant inference lightweight
+- preserve local-only sensing and nearby-ant broad-phase behavior
+- avoid introducing attachment or graph work in this phase
+- preserve the sprite-based render path and readable debug output
 
 ## Known Constraints
 - Browser-first (no backend)
 - JavaScript (no TypeScript required)
 - PixiJS-based rendering
 - no global target knowledge for ant perception
-- regular ants and queens will eventually differ in traversal rules, but not fully yet
-- only walls and ground currently occlude sensed objects
+- existing ant-facing visuals remain velocity-derived only
+- interaction and grasp outputs are inert runtime intents for now
 
-## Notes for Next Phase (Phase 3 Preview)
-Next phase will introduce:
-- neural network integration
-- assembling wedge and scalar inputs into brain inputs
-- replacing procedural steering with network outputs
-
-Design Phase 2 so the current sensor outputs can feed directly into `NeuralNet` without a refactor.
+## Notes for Next Phase Preview
+Next phase should build from this wiring layer by deciding how:
+- grasp intent enters attachment negotiation
+- interaction intent maps to food contact behavior
+- neural weights are inherited, mutated, and rewarded
 
 ## Instruction to Codex
-- Focus only on Phase 2 sensor and map work
-- Keep perception local and embodied
-- Avoid implementing attachment or structural physics early
-- Prefer clean module boundaries over clever shortcuts
-- Leave brief comments only where future extension is non-obvious
+- Focus only on Phase 3 neural wiring
+- Keep the neural module separate from gameplay logic
+- Preserve the existing sensor debug semantics
+- Avoid sneaking in attachment or food-system behavior early
+- Prefer explicit runtime data flow over hidden coupling

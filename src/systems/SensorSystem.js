@@ -197,9 +197,6 @@ export class SensorSystem {
       scalars: {
         foodScent: mapSystem.sampleFoodScentAt(ant.position),
         pheromone: 0,
-        speed: Math.min(1, Math.abs(ant.velocity.x) / 60),
-        attached: ant.attached ? 1 : 0,
-        connectionCount: Math.min(1, ant.connectionIds.length / 4),
       },
     };
   }
@@ -249,3 +246,5 @@ export class SensorSystem {
     };
   }
 }
+
+
