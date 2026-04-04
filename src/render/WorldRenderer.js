@@ -66,7 +66,7 @@ function formatWedgeCensus(wedge) {
   return lines.join("\n");
 }
 
-function formatBrainDebug(ant) {
+function formatBrainDebug(ant, simulation) {
   const inputs = ant.brainState?.inputs ?? [];
   const outputs = ant.brainState?.outputs ?? [];
   const wedgeNames = SENSOR_TUNING.wedgeNames;
@@ -92,6 +92,10 @@ function formatBrainDebug(ant) {
   lines.push(`interact ${formatScalar(outputs[NEURAL_TUNING.interactionOutputIndex] ?? 0)}`);
   lines.push(`intent grasp ${formatScalar(ant.brainState?.graspIntent ?? 0)}`);
   lines.push(`intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`);
+  lines.push(`state ${ant.movement?.verticalState ?? "unknown"}`);
+  lines.push(`support ${ant.movement?.supportType ?? "unknown"}`);
+  lines.push(`falls ${simulation?.movementSystem?.totalFalls ?? 0}`);
+  lines.push(`falling ants ${(simulation?.ants ?? []).filter((candidate) => candidate.movement?.verticalState === "falling").length}`);
 
   return lines.join("\n");
 }
@@ -321,7 +325,7 @@ export class WorldRenderer {
     }
 
     if (this.brainDebugText) {
-      this.brainDebugText.text = formatBrainDebug(ant);
+      this.brainDebugText.text = formatBrainDebug(ant, this.simulation);
     }
   }
 
@@ -373,3 +377,4 @@ export class WorldRenderer {
     });
   }
 }
+

@@ -14,6 +14,7 @@ export class AntView {
     this.lastAnimationTick = -1;
     this.lastState = null;
     this.lastScale = null;
+    this.lastRotation = null;
   }
 
   sync(elapsedTime) {
@@ -24,11 +25,19 @@ export class AntView {
     }
 
     const sizeScale = this.ant.visualState === "grasping" ? 0.6 : 0.75;
+    const targetRotation = this.ant.movement?.verticalState === "falling"
+      ? this.ant.facing * (Math.PI * 0.42)
+      : 0;
 
     if (this.ant.facing !== this.lastFacing || sizeScale !== this.lastScale) {
       this.sprite.scale.set(-this.ant.facing * sizeScale, sizeScale);
       this.lastFacing = this.ant.facing;
       this.lastScale = sizeScale;
+    }
+
+    if (targetRotation !== this.lastRotation) {
+      this.sprite.rotation = targetRotation;
+      this.lastRotation = targetRotation;
     }
 
     const animationTick = Math.floor(elapsedTime * ANT_TUNING.animationTickRate);

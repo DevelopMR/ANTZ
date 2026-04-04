@@ -12,6 +12,7 @@ export class MovementSystem {
   constructor(random = Math.random) {
     this.random = random;
     this.stateCycle = ["standing", "walking", "reaching", "walking", "grasping"];
+    this.totalFalls = 0;
   }
 
   update(ants, deltaTime, mapSystem) {
@@ -293,6 +294,7 @@ export class MovementSystem {
   #startFalling(ant) {
     if (ant.movement.verticalState !== "falling") {
       ant.movement.fallStartY = ant.position.y;
+      this.totalFalls += 1;
     }
 
     ant.movement.supportType = "none";
@@ -335,4 +337,6 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
+
+
 

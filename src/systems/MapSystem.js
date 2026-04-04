@@ -460,7 +460,11 @@ export class MapSystem {
     }
 
     for (const ant of supportAnts) {
-      if (ant.movement.supportType !== "ground" || ant.attached) {
+      const isStableAntSurface = ant.attached ||
+        ant.movement.supportType === "ground" ||
+        ant.movement.supportType === "wall";
+
+      if (!isStableAntSurface || ant.movement.verticalState === "falling") {
         continue;
       }
 
@@ -492,6 +496,8 @@ export class MapSystem {
     return bestSurface ?? groundSurface;
   }
 }
+
+
 
 
 
