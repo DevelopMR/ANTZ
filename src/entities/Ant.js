@@ -55,9 +55,10 @@ export class Ant {
       groundY: movementProfile.groundY,
       postureTimer: movementProfile.postureTimer,
       supportType: "ground",
-      supportAntId: null,
+      supportId: null,
       verticalState: "grounded",
       localSupportOffsetX: 0,
+      fallStartY: movementProfile.groundY,
     };
 
     this.attachment = {

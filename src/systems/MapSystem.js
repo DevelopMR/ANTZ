@@ -273,6 +273,7 @@ export class MapSystem {
       makeWall("wall-3", 1082, 182, 24, this.ground.y - 182),
       makeWall("ledge-0", 632, 412, 162, 16),
     ];
+    this.wallById = new Map(this.walls.map((wall) => [wall.id, wall]));
 
     this.pegs = [
       makePeg("peg-0", 372, 452, 16),
@@ -285,6 +286,8 @@ export class MapSystem {
       makeFood("food-1", 668, 302, 10),
       makeFood("food-2", 950, 198, 10),
       makeFood("food-3", 208, this.ground.y - 18, 9),
+      makeFood("food-4", 289, 490, 9),
+      makeFood("food-5", 853, 236, 9),
     ];
 
     this.staticSensorObjects = [this.ground, ...this.walls, ...this.pegs, ...this.foodNodes];
@@ -298,6 +301,10 @@ export class MapSystem {
       pegs: this.pegs,
       foodNodes: this.foodNodes,
     };
+  }
+
+  getWallById(id) {
+    return this.wallById.get(id) ?? null;
   }
 
   getStaticSensorCandidates(position, radius) {
@@ -396,8 +403,8 @@ export class MapSystem {
     let resolvedX = nextX;
 
     for (const wall of this.walls) {
-      const blocksGroundLane = ant.movement.groundY >= wall.y - ANT_TUNING.collisionRadius &&
-        ant.movement.groundY <= wall.y + wall.height + ANT_TUNING.collisionRadius;
+      const blocksGroundLane = ant.position.y >= wall.y - ANT_TUNING.collisionRadius &&
+        ant.position.y <= wall.y + wall.height + ANT_TUNING.collisionRadius;
 
       if (!blocksGroundLane) {
         continue;
@@ -415,4 +422,77 @@ export class MapSystem {
 
     return Math.max(24, Math.min(WORLD_WIDTH - 24, resolvedX));
   }
+
+  findLandingSurface(x, currentY, supportAnts = []) {
+    const groundSurface = {
+      type: "ground",
+      id: "ground",
+      y: SIMULATION_TUNING.groundY,
+      x,
+    };
+
+    let bestSurface = groundSurface.y >= currentY ? groundSurface : null;
+
+    for (const wall of this.walls) {
+      const minX = wall.x - ANT_TUNING.supportHalfWidth;
+      const maxX = wall.x + wall.width + ANT_TUNING.supportHalfWidth;
+      if (x < minX || x > maxX) {
+        continue;
+      }
+
+      const topY = wall.y - ANT_TUNING.supportHeight;
+      if (topY < currentY) {
+        continue;
+      }
+
+      if (!bestSurface || topY < bestSurface.y) {
+        bestSurface = {
+          type: "wall",
+          id: wall.id,
+          y: topY,
+          x: clamp(
+            x,
+            wall.x + ANT_TUNING.supportHalfWidth * 0.25,
+            wall.x + wall.width - ANT_TUNING.supportHalfWidth * 0.25
+          ),
+        };
+      }
+    }
+
+    for (const ant of supportAnts) {
+      if (ant.movement.supportType !== "ground" || ant.attached) {
+        continue;
+      }
+
+      const minX = ant.position.x - ANT_TUNING.supportHalfWidth;
+      const maxX = ant.position.x + ANT_TUNING.supportHalfWidth;
+      if (x < minX || x > maxX) {
+        continue;
+      }
+
+      const topY = ant.position.y - ANT_TUNING.supportHeight;
+      if (topY < currentY) {
+        continue;
+      }
+
+      if (!bestSurface || topY < bestSurface.y) {
+        bestSurface = {
+          type: "ant",
+          id: ant.id,
+          y: topY,
+          x: clamp(
+            x,
+            ant.position.x - ANT_TUNING.supportHalfWidth,
+            ant.position.x + ANT_TUNING.supportHalfWidth
+          ),
+        };
+      }
+    }
+
+    return bestSurface ?? groundSurface;
+  }
 }
+
+
+
+

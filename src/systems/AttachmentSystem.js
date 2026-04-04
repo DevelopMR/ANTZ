@@ -72,9 +72,20 @@ export class AttachmentSystem {
       const otherAnt = antById.get(otherId);
       if (otherAnt) {
         removeConnection(otherAnt, ant.id);
+        otherAnt.movement.supportType = "none";
+        otherAnt.movement.supportId = null;
+        otherAnt.movement.localSupportOffsetX = 0;
+        otherAnt.movement.verticalState = "falling";
+        otherAnt.movement.fallStartY = otherAnt.position.y;
       }
       removeConnection(ant, otherId);
     }
+
+    ant.movement.supportType = "none";
+    ant.movement.supportId = null;
+    ant.movement.localSupportOffsetX = 0;
+    ant.movement.verticalState = "falling";
+    ant.movement.fallStartY = ant.position.y;
   }
 
   #attemptPerchedGrasp(ant, ants, antById) {
@@ -86,7 +97,7 @@ export class AttachmentSystem {
       return;
     }
 
-    const supportAnt = antById.get(ant.movement.supportAntId);
+    const supportAnt = antById.get(ant.movement.supportId);
     if (!supportAnt || supportAnt.attached) {
       return;
     }
@@ -198,3 +209,4 @@ export class AttachmentSystem {
     return randomRange(this.random, ANT_TUNING.graspPollCooldownMin, ANT_TUNING.graspPollCooldownMax);
   }
 }
+

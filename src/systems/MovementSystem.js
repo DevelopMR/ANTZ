@@ -4,7 +4,7 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function getSupportTopY(ant) {
+function getAntSupportTopY(ant) {
   return ant.position.y - ANT_TUNING.supportHeight;
 }
 
@@ -18,7 +18,7 @@ export class MovementSystem {
     const antById = new Map(ants.map((ant) => [ant.id, ant]));
 
     for (const ant of ants) {
-      this.#updateSupportState(ant, antById);
+      this.#updateSupportState(ant, antById, mapSystem);
       this.#updatePosture(ant, deltaTime);
       this.#integrateMotion(ant, deltaTime, mapSystem, ants, antById);
       this.#containWithinWorld(ant);
@@ -26,20 +26,37 @@ export class MovementSystem {
     }
   }
 
-  #updateSupportState(ant, antById) {
-    if (ant.movement.supportType !== "ant") {
+  #updateSupportState(ant, antById, mapSystem) {
+    if (ant.movement.verticalState === "falling") {
       return;
     }
 
-    const supportAnt = antById.get(ant.movement.supportAntId);
-    if (!supportAnt || supportAnt.movement.supportType !== "ground") {
-      this.#detachToGround(ant);
+    if (ant.movement.supportType === "ant") {
+      const supportAnt = antById.get(ant.movement.supportId);
+      if (!supportAnt || supportAnt.movement.verticalState === "falling") {
+        this.#startFalling(ant);
+        return;
+      }
+
+      const maxOffset = ANT_TUNING.supportHalfWidth + ANT_TUNING.climbHorizontalRange;
+      if (Math.abs(ant.position.x - supportAnt.position.x) > maxOffset) {
+        this.#startFalling(ant);
+      }
       return;
     }
 
-    const maxOffset = ANT_TUNING.supportHalfWidth + ANT_TUNING.climbHorizontalRange;
-    if (Math.abs(ant.position.x - supportAnt.position.x) > maxOffset) {
-      this.#detachToGround(ant);
+    if (ant.movement.supportType === "wall") {
+      const wall = mapSystem.getWallById(ant.movement.supportId);
+      if (!wall) {
+        this.#startFalling(ant);
+        return;
+      }
+
+      const minX = wall.x - ANT_TUNING.supportHalfWidth;
+      const maxX = wall.x + wall.width + ANT_TUNING.supportHalfWidth;
+      if (ant.position.x < minX || ant.position.x > maxX) {
+        this.#startFalling(ant);
+      }
     }
   }
 
@@ -68,17 +85,17 @@ export class MovementSystem {
           ? 0.5
           : 0.2;
 
-    const currentSupportAnt = ant.movement.supportType === "ant"
-      ? antById.get(ant.movement.supportAntId)
+    const supportAnt = ant.movement.supportType === "ant"
+      ? antById.get(ant.movement.supportId)
       : null;
     const wantsClimb = yIntent <= -ANT_TUNING.climbIntentThreshold;
     const wantsDescend = yIntent >= ANT_TUNING.climbIntentThreshold;
 
-    if (!attachedLock && !currentSupportAnt && wantsClimb) {
+    if (!attachedLock && ant.movement.verticalState !== "falling" && !supportAnt && wantsClimb) {
       const climbTarget = this.#findClimbTarget(ant, ants);
       if (climbTarget) {
         ant.movement.supportType = "ant";
-        ant.movement.supportAntId = climbTarget.id;
+        ant.movement.supportId = climbTarget.id;
         ant.movement.verticalState = "climbing";
         ant.movement.localSupportOffsetX = clamp(
           ant.position.x - climbTarget.position.x,
@@ -86,13 +103,44 @@ export class MovementSystem {
           ANT_TUNING.supportHalfWidth
         );
       }
-    } else if (!attachedLock && currentSupportAnt && wantsDescend) {
-      this.#detachToGround(ant, "descending");
+    } else if (!attachedLock && supportAnt && wantsDescend) {
+      this.#startFalling(ant);
     }
 
-    const supportAnt = ant.movement.supportType === "ant"
-      ? antById.get(ant.movement.supportAntId)
-      : null;
+    this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale, attachedLock);
+
+    if (ant.movement.verticalState === "falling") {
+      this.#integrateFall(ant, deltaTime, mapSystem, ants, antById);
+      return;
+    }
+
+    if (supportAnt) {
+      const targetY = getAntSupportTopY(supportAnt);
+      const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
+      ant.position.y = nextY;
+      ant.velocity.y = 0;
+
+      if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
+        ant.position.y = targetY;
+        ant.movement.verticalState = "perched";
+      } else {
+        ant.movement.verticalState = ant.movement.verticalState === "descending" ? "descending" : "climbing";
+      }
+      return;
+    }
+
+    const targetY = this.#getStaticSupportY(ant, mapSystem);
+    const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
+    ant.position.y = nextY;
+    ant.velocity.y = 0;
+
+    if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
+      ant.position.y = targetY;
+      ant.movement.verticalState = "grounded";
+    }
+  }
+
+  #applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale, attachedLock) {
     const xForce = ANT_TUNING.forwardDrive * ant.traits.forwardBias * xIntent * postureSpeedScale;
 
     ant.movement.desiredDirection = xIntent;
@@ -108,6 +156,7 @@ export class MovementSystem {
           ANT_TUNING.supportHalfWidth
         );
       }
+
       ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
       ant.velocity.x = supportAnt.velocity.x;
     } else {
@@ -126,32 +175,62 @@ export class MovementSystem {
     if (Math.abs(ant.velocity.x) > 0.02) {
       ant.facing = ant.velocity.x >= 0 ? 1 : -1;
     }
+  }
 
-    if (supportAnt) {
-      const targetY = getSupportTopY(supportAnt);
-      const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
-      ant.position.y = nextY;
-      ant.velocity.y = targetY - nextY;
+  #integrateFall(ant, deltaTime, mapSystem, ants, antById) {
+    ant.velocity.y = Math.min(ant.velocity.y + ANT_TUNING.gravity * deltaTime, ANT_TUNING.maxFallSpeed);
 
-      if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
-        ant.position.y = targetY;
-        ant.movement.verticalState = "perched";
-      } else {
-        ant.movement.verticalState = ant.movement.verticalState === "descending" ? "descending" : "climbing";
-      }
+    const currentY = ant.position.y;
+    const nextY = currentY + ant.velocity.y * deltaTime;
+    const landingSurface = mapSystem.findLandingSurface(ant.position.x, currentY, ants.filter((candidate) => candidate.id !== ant.id));
+
+    if (landingSurface && nextY >= landingSurface.y) {
+      this.#landOnSurface(ant, landingSurface, antById);
       return;
     }
 
-    const groundY = ant.movement.groundY;
-    const targetY = groundY;
-    const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
     ant.position.y = nextY;
-    ant.velocity.y = targetY - nextY;
+  }
 
-    if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
-      ant.position.y = targetY;
+  #landOnSurface(ant, surface, antById) {
+    ant.velocity.y = 0;
+    ant.position.x = surface.x;
+    ant.position.y = surface.y;
+
+    if (surface.type === "ground") {
+      ant.movement.supportType = "ground";
+      ant.movement.supportId = null;
+      ant.movement.groundY = surface.y;
+      ant.movement.localSupportOffsetX = 0;
       ant.movement.verticalState = "grounded";
+      return;
     }
+
+    if (surface.type === "wall") {
+      ant.movement.supportType = "wall";
+      ant.movement.supportId = surface.id;
+      ant.movement.localSupportOffsetX = 0;
+      ant.movement.verticalState = "grounded";
+      return;
+    }
+
+    const supportAnt = antById.get(surface.id);
+    if (!supportAnt) {
+      ant.movement.supportType = "ground";
+      ant.movement.supportId = null;
+      ant.movement.verticalState = "grounded";
+      return;
+    }
+
+    ant.movement.supportType = "ant";
+    ant.movement.supportId = supportAnt.id;
+    ant.movement.localSupportOffsetX = clamp(
+      ant.position.x - supportAnt.position.x,
+      -ANT_TUNING.supportHalfWidth,
+      ANT_TUNING.supportHalfWidth
+    );
+    ant.position.y = getAntSupportTopY(supportAnt);
+    ant.movement.verticalState = "perched";
   }
 
   #findClimbTarget(ant, ants) {
@@ -163,7 +242,11 @@ export class MovementSystem {
         continue;
       }
 
-      if (candidate.movement.supportType !== "ground") {
+      if (candidate.movement.verticalState === "falling") {
+        continue;
+      }
+
+      if (candidate.movement.supportType === "ant") {
         continue;
       }
 
@@ -186,6 +269,17 @@ export class MovementSystem {
     return bestTarget;
   }
 
+  #getStaticSupportY(ant, mapSystem) {
+    if (ant.movement.supportType === "wall") {
+      const wall = mapSystem.getWallById(ant.movement.supportId);
+      if (wall) {
+        return wall.y - ANT_TUNING.supportHeight;
+      }
+    }
+
+    return ant.movement.groundY;
+  }
+
   #moveTowardsY(currentY, targetY, deltaTime) {
     const delta = targetY - currentY;
     if (Math.abs(delta) <= ANT_TUNING.supportSnapDistance) {
@@ -196,11 +290,16 @@ export class MovementSystem {
     return currentY + Math.sign(delta) * Math.min(Math.abs(delta), maxStep);
   }
 
-  #detachToGround(ant, verticalState = "descending") {
-    ant.movement.supportType = "ground";
-    ant.movement.supportAntId = null;
-    ant.movement.verticalState = verticalState;
+  #startFalling(ant) {
+    if (ant.movement.verticalState !== "falling") {
+      ant.movement.fallStartY = ant.position.y;
+    }
+
+    ant.movement.supportType = "none";
+    ant.movement.supportId = null;
     ant.movement.localSupportOffsetX = 0;
+    ant.movement.verticalState = "falling";
+    ant.velocity.y = Math.max(ant.velocity.y, 0);
   }
 
   #syncVisualState(ant) {
@@ -209,7 +308,7 @@ export class MovementSystem {
       return;
     }
 
-    if (ant.movement.verticalState === "climbing" || ant.movement.verticalState === "descending") {
+    if (["climbing", "descending", "falling"].includes(ant.movement.verticalState)) {
       ant.visualState = "grasping";
       return;
     }
@@ -236,3 +335,4 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
+
