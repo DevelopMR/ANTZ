@@ -31,8 +31,8 @@ export class BrainSystem {
       ant.brainState = {
         inputs,
         outputs,
-        turn: clamp(outputs[NEURAL_TUNING.turnOutputIndex] ?? 0, -1, 1),
-        forward: clamp(outputs[NEURAL_TUNING.forwardOutputIndex] ?? 0, 0, 1),
+        xVel: clamp(outputs[NEURAL_TUNING.xVelOutputIndex] ?? 0, -1, 1),
+        yVel: clamp(outputs[NEURAL_TUNING.yVelOutputIndex] ?? 0, -1, 1),
         graspIntent: clamp(outputs[NEURAL_TUNING.graspOutputIndex] ?? 0, 0, 1),
         interaction: clamp(outputs[NEURAL_TUNING.interactionOutputIndex] ?? 0, 0, 1),
       };

@@ -86,8 +86,8 @@ function formatBrainDebug(ant) {
   lines.push(`food scent ${formatScalar(inputs[12] ?? 0)}`);
   lines.push(`pheromone ${formatScalar(inputs[13] ?? 0)}`);
   lines.push("Outputs");
-  lines.push(`turn ${formatScalar(outputs[NEURAL_TUNING.turnOutputIndex] ?? 0)}`);
-  lines.push(`forward ${formatScalar(outputs[NEURAL_TUNING.forwardOutputIndex] ?? 0)}`);
+  lines.push(`xVel ${formatScalar(outputs[NEURAL_TUNING.xVelOutputIndex] ?? 0)}`);
+  lines.push(`yVel ${formatScalar(outputs[NEURAL_TUNING.yVelOutputIndex] ?? 0)}`);
   lines.push(`grasp ${formatScalar(outputs[NEURAL_TUNING.graspOutputIndex] ?? 0)}`);
   lines.push(`interact ${formatScalar(outputs[NEURAL_TUNING.interactionOutputIndex] ?? 0)}`);
   lines.push(`intent grasp ${formatScalar(ant.brainState?.graspIntent ?? 0)}`);

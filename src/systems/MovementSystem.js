@@ -1,4 +1,4 @@
-import { ANT_TUNING, NEURAL_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -13,7 +13,6 @@ export class MovementSystem {
   update(ants, deltaTime, mapSystem) {
     for (const ant of ants) {
       this.#updatePosture(ant, deltaTime);
-      this.#updateNeuralIntent(ant, deltaTime);
       this.#integrateMotion(ant, deltaTime, mapSystem);
       this.#containWithinWorld(ant);
     }
@@ -32,36 +31,23 @@ export class MovementSystem {
     }
   }
 
-  #updateNeuralIntent(ant, deltaTime) {
-    const turnSignal = ant.brainState?.turn ?? 0;
-    ant.movement.desiredDirection += turnSignal * ant.traits.turnResponsiveness * NEURAL_TUNING.turnRate * deltaTime;
-    ant.movement.desiredDirection = clamp(ant.movement.desiredDirection, -1, 1);
-
-    if (Math.abs(ant.movement.desiredDirection) > 0.05) {
-      ant.facing = ant.movement.desiredDirection >= 0 ? 1 : -1;
-    }
-  }
-
   #integrateMotion(ant, deltaTime, mapSystem) {
-    const forwardSignal = ant.brainState?.forward ?? 0;
+    const xIntent = ant.brainState?.xVel ?? 0;
+    const yIntent = ant.brainState?.yVel ?? 0;
     const postureSpeedScale = ant.visualState === "walking"
       ? 1
       : ant.visualState === "reaching"
-        ? 0.35
+        ? 0.45
         : ant.visualState === "standing"
-          ? 0.42
-          : 0.18;
+          ? 0.5
+          : 0.2;
 
-    const forwardForce =
-      ANT_TUNING.forwardDrive *
-      ant.traits.forwardBias *
-      ant.movement.desiredDirection *
-      forwardSignal *
-      postureSpeedScale;
+    const xForce = ANT_TUNING.forwardDrive * ant.traits.forwardBias * xIntent * postureSpeedScale;
 
-    ant.velocity.x += forwardForce * deltaTime;
+    ant.movement.desiredDirection = xIntent;
+    ant.velocity.x += xForce * deltaTime;
     ant.velocity.x *= SIMULATION_TUNING.linearDamping;
-    ant.velocity.y = 0;
+    ant.velocity.y = yIntent;
 
     ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.maxSpeed, ANT_TUNING.maxSpeed);
     const currentX = ant.position.x;
@@ -71,6 +57,10 @@ export class MovementSystem {
     if (resolvedX !== nextX) {
       ant.velocity.x *= 0.15;
       ant.movement.desiredDirection *= -0.45;
+    }
+
+    if (Math.abs(ant.velocity.x) > 0.02) {
+      ant.facing = ant.velocity.x >= 0 ? 1 : -1;
     }
 
     ant.position.x = resolvedX;
@@ -83,11 +73,9 @@ export class MovementSystem {
 
     if (ant.position.x <= minX) {
       ant.position.x = minX;
-      ant.movement.desiredDirection = Math.abs(ant.movement.desiredDirection) || 0.6;
       ant.facing = 1;
     } else if (ant.position.x >= maxX) {
       ant.position.x = maxX;
-      ant.movement.desiredDirection = -Math.abs(ant.movement.desiredDirection || 0.6);
       ant.facing = -1;
     }
   }

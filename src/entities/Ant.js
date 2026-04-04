@@ -24,15 +24,15 @@ export class Ant {
       inputCount: NEURAL_TUNING.inputCount,
       hiddenLayers: NEURAL_TUNING.hiddenLayers,
       outputCount: NEURAL_TUNING.outputCount,
-      outputActivations: ["tanh", "sigmoid", "sigmoid", "sigmoid"],
+      outputActivations: ["tanh", "tanh", "sigmoid", "sigmoid"],
       random,
     });
 
     this.brainState = {
       inputs: new Array(NEURAL_TUNING.inputCount).fill(0),
       outputs: new Array(NEURAL_TUNING.outputCount).fill(0),
-      turn: 0,
-      forward: 0,
+      xVel: 0,
+      yVel: 0,
       graspIntent: 0,
       interaction: 0,
     };

@@ -72,11 +72,10 @@ export const NEURAL_TUNING = {
   inputCount: SENSOR_TUNING.wedgeCount * 2 + SENSOR_TUNING.scalarInputCount,
   hiddenLayers: [12],
   outputCount: 4,
-  turnOutputIndex: 0,
-  forwardOutputIndex: 1,
+  xVelOutputIndex: 0,
+  yVelOutputIndex: 1,
   graspOutputIndex: 2,
   interactionOutputIndex: 3,
-  turnRate: 2.8,
 };
 
 export const MAP_TUNING = {
