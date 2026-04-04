@@ -64,8 +64,9 @@ export class MovementSystem {
     ant.velocity.y = 0;
 
     ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.maxSpeed, ANT_TUNING.maxSpeed);
-    const nextX = ant.position.x + ant.velocity.x * deltaTime;
-    const resolvedX = mapSystem.constrainHorizontalMovement(ant, nextX);
+    const currentX = ant.position.x;
+    const nextX = currentX + ant.velocity.x * deltaTime;
+    const resolvedX = mapSystem.constrainHorizontalMovement(ant, currentX, nextX);
 
     if (resolvedX !== nextX) {
       ant.velocity.x *= 0.15;
@@ -95,4 +96,3 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
-
