@@ -28,6 +28,12 @@ export const ANT_TUNING = {
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
   collisionRadius: 11,
+  supportHeight: 26,
+  supportHalfWidth: 12,
+  climbSpeed: 58,
+  climbIntentThreshold: 0.18,
+  climbHorizontalRange: 22,
+  supportSnapDistance: 3,
   visualStateCycle: ["standing", "walking", "reaching", "walking", "grasping"],
   animationTickRate: 12,
   animationFps: {

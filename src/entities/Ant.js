@@ -54,6 +54,10 @@ export class Ant {
       desiredDirection: movementProfile.initialDirection,
       groundY: movementProfile.groundY,
       postureTimer: movementProfile.postureTimer,
+      supportType: "ground",
+      supportAntId: null,
+      verticalState: "grounded",
+      localSupportOffsetX: 0,
     };
 
     this.visual = {
