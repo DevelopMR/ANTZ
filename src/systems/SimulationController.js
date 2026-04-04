@@ -1,6 +1,7 @@
 import { MapSystem } from "./MapSystem.js";
 import { SensorSystem } from "./SensorSystem.js";
 import { BrainSystem } from "./BrainSystem.js";
+import { AttachmentSystem } from "./AttachmentSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
 import { ANT_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
@@ -17,6 +18,7 @@ export class SimulationController {
     this.sensorSystem = new SensorSystem();
     this.brainSystem = new BrainSystem();
     this.movementSystem = new MovementSystem(random);
+    this.attachmentSystem = new AttachmentSystem(random);
     this.accumulator = 0;
     this.elapsedTime = 0;
     this.ants = [];
@@ -39,6 +41,7 @@ export class SimulationController {
       this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
       this.brainSystem.update(this.ants);
       this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.attachmentSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep);
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
     }
   }

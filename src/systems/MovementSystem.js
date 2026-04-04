@@ -59,6 +59,7 @@ export class MovementSystem {
   #integrateMotion(ant, deltaTime, mapSystem, ants, antById) {
     const xIntent = ant.brainState?.xVel ?? 0;
     const yIntent = ant.brainState?.yVel ?? 0;
+    const attachedLock = ant.attached;
     const postureSpeedScale = ant.visualState === "walking"
       ? 1
       : ant.visualState === "reaching"
@@ -73,7 +74,7 @@ export class MovementSystem {
     const wantsClimb = yIntent <= -ANT_TUNING.climbIntentThreshold;
     const wantsDescend = yIntent >= ANT_TUNING.climbIntentThreshold;
 
-    if (!currentSupportAnt && wantsClimb) {
+    if (!attachedLock && !currentSupportAnt && wantsClimb) {
       const climbTarget = this.#findClimbTarget(ant, ants);
       if (climbTarget) {
         ant.movement.supportType = "ant";
@@ -85,7 +86,7 @@ export class MovementSystem {
           ANT_TUNING.supportHalfWidth
         );
       }
-    } else if (currentSupportAnt && wantsDescend) {
+    } else if (!attachedLock && currentSupportAnt && wantsDescend) {
       this.#detachToGround(ant, "descending");
     }
 
@@ -95,16 +96,18 @@ export class MovementSystem {
     const xForce = ANT_TUNING.forwardDrive * ant.traits.forwardBias * xIntent * postureSpeedScale;
 
     ant.movement.desiredDirection = xIntent;
-    ant.velocity.x += xForce * deltaTime;
-    ant.velocity.x *= SIMULATION_TUNING.linearDamping;
+    ant.velocity.x += attachedLock ? 0 : xForce * deltaTime;
+    ant.velocity.x *= attachedLock ? 0.25 : SIMULATION_TUNING.linearDamping;
     ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.maxSpeed, ANT_TUNING.maxSpeed);
 
     if (supportAnt) {
-      ant.movement.localSupportOffsetX = clamp(
-        ant.movement.localSupportOffsetX + xIntent * ANT_TUNING.maxSpeed * 0.35 * deltaTime,
-        -ANT_TUNING.supportHalfWidth,
-        ANT_TUNING.supportHalfWidth
-      );
+      if (!attachedLock) {
+        ant.movement.localSupportOffsetX = clamp(
+          ant.movement.localSupportOffsetX + xIntent * ANT_TUNING.maxSpeed * 0.35 * deltaTime,
+          -ANT_TUNING.supportHalfWidth,
+          ANT_TUNING.supportHalfWidth
+        );
+      }
       ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
       ant.velocity.x = supportAnt.velocity.x;
     } else {
@@ -128,7 +131,7 @@ export class MovementSystem {
       const targetY = getSupportTopY(supportAnt);
       const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
       ant.position.y = nextY;
-      ant.velocity.y = nextY - ant.position.y;
+      ant.velocity.y = targetY - nextY;
 
       if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
         ant.position.y = targetY;
@@ -143,7 +146,7 @@ export class MovementSystem {
     const targetY = groundY;
     const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
     ant.position.y = nextY;
-    ant.velocity.y = nextY - ant.position.y;
+    ant.velocity.y = targetY - nextY;
 
     if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
       ant.position.y = targetY;
@@ -201,6 +204,11 @@ export class MovementSystem {
   }
 
   #syncVisualState(ant) {
+    if (ant.attached) {
+      ant.visualState = "grasping";
+      return;
+    }
+
     if (ant.movement.verticalState === "climbing" || ant.movement.verticalState === "descending") {
       ant.visualState = "grasping";
       return;

@@ -60,6 +60,12 @@ export class Ant {
       localSupportOffsetX: 0,
     };
 
+    this.attachment = {
+      groupId: null,
+      thrillBoost: 0,
+      pollCooldown: 0,
+    };
+
     this.visual = {
       animationOffset: visualProfile.animationOffset,
       frameSeed: visualProfile.frameSeed,
