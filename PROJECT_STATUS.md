@@ -4,10 +4,10 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 3 - Neural Net Wiring
+Phase 3 - Neural Net Wiring Complete
 
 ## Phase Goal
-Wire the finalized Phase 2 sensor outputs directly into each ant's neural net so ants:
+Phase 3 established a working neural-control loop where ants:
 - assemble a local 14-value brain input vector
 - run feedforward inference every simulation step
 - use neural outputs for turn and forward movement
@@ -23,6 +23,7 @@ No attachment, food interaction, reward, reproduction, or pheromone-map behavior
 - movement uses neural `turn` and `forward` outputs instead of procedural steering
 - `graspIntent` and `interaction` are stored on each ant without changing gameplay yet
 - tracked-ant debug shows both sensor data and brain IO
+- wall collision is stable enough for the current side-view lane prototype
 
 ## Explicit Non-Goals (Do NOT implement yet)
 - attachment / connection system
@@ -66,14 +67,14 @@ At minimum:
 - interaction and grasp outputs are inert runtime intents for now
 
 ## Notes for Next Phase Preview
-Next phase should build from this wiring layer by deciding how:
-- grasp intent enters attachment negotiation
-- interaction intent maps to food contact behavior
-- neural weights are inherited, mutated, and rewarded
+Phase 4 should introduce grasp intent as a real system input by deciding how:
+- grasp intent contributes to attachment negotiation
+- ants choose when to seek, hold, or release local contact
+- attachment limits and compatibility checks are represented before full physics arrives
 
 ## Instruction to Codex
-- Focus only on Phase 3 neural wiring
+- Focus only on grasp intent and attachment entry behavior in the next phase
 - Keep the neural module separate from gameplay logic
-- Preserve the existing sensor debug semantics
-- Avoid sneaking in attachment or food-system behavior early
+- Preserve the existing sensor and brain debug semantics
+- Avoid sneaking in food-system or structural-physics behavior early
 - Prefer explicit runtime data flow over hidden coupling

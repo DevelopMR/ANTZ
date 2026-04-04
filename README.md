@@ -6,7 +6,7 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project is currently in Phase 3 wiring work:
+The project has completed Phase 3:
 - side-view ant presentation
 - lower-left colony spawn area
 - ground-bound ant movement prototype
@@ -17,7 +17,9 @@ The project is currently in Phase 3 wiring work:
 - per-ant feedforward neural nets with configurable hidden layers
 - explicit brain input assembly from wedge proximity, wedge danger-color, food scent, and pheromone
 - neural control of turn and forward motion
+- stored `graspIntent` and `interaction` outputs ready for later phases
 - tracked-ant debug visualization for both sensor data and brain IO
+- improved wall collision handling and clamped wedge-debug labels for readability
 
 Not implemented yet:
 - attachment mechanics
@@ -69,13 +71,13 @@ Ant perception is currently shaped around local-only inputs such as:
 - nondirectional local food scent scalar
 - nondirectional pheromone scalar
 
-Phase 3 currently wires those sensor values into a feedforward brain with 4 outputs:
+Phase 3 wires those sensor values into a feedforward brain with 4 outputs:
 - `turn`
 - `forward`
 - `graspIntent`
 - `interaction`
 
-Only `turn` and `forward` affect movement right now. `graspIntent` and `interaction` are stored as inert runtime intents for later phases.
+Only `turn` and `forward` affect movement right now. `graspIntent` and `interaction` are stored as inert runtime intents for the next phase.
 
 ## Project Structure
 
