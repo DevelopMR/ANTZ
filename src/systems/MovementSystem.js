@@ -8,6 +8,10 @@ function getAntSupportTopY(ant) {
   return ant.position.y - ANT_TUNING.supportHeight;
 }
 
+function getSupportCoverageLimit() {
+  return ANT_TUNING.supportHalfWidth * 2 * (1 - ANT_TUNING.graspCoverageRatio);
+}
+
 export class MovementSystem {
   constructor(random = Math.random) {
     this.random = random;
@@ -19,12 +23,38 @@ export class MovementSystem {
     const antById = new Map(ants.map((ant) => [ant.id, ant]));
 
     for (const ant of ants) {
+      this.#syncExternalFallState(ant);
       this.#updateSupportState(ant, antById, mapSystem);
       this.#updatePosture(ant, deltaTime);
       this.#integrateMotion(ant, deltaTime, mapSystem, ants, antById);
       this.#containWithinWorld(ant);
+    }
+
+    this.#resolveUnstableStacks(ants, antById);
+
+    for (const ant of ants) {
       this.#syncVisualState(ant);
     }
+  }
+
+  #syncExternalFallState(ant) {
+    if (ant.movement.verticalState === "falling") {
+      if (!ant.movement.fallCounted) {
+        this.totalFalls += 1;
+        ant.movement.fallCounted = true;
+      }
+
+      if (!ant.movement.fallMode) {
+        ant.movement.fallMode = "collapse";
+      }
+
+      if (ant.movement.fallMode === "collapse" && ant.movement.collapseScatterNextY == null) {
+        ant.movement.collapseScatterNextY = ant.position.y + ANT_TUNING.collapseScatterStepY;
+      }
+      return;
+    }
+
+    ant.movement.fallCounted = false;
   }
 
   #updateSupportState(ant, antById, mapSystem) {
@@ -34,14 +64,18 @@ export class MovementSystem {
 
     if (ant.movement.supportType === "ant") {
       const supportAnt = antById.get(ant.movement.supportId);
-      if (!supportAnt || supportAnt.movement.verticalState === "falling") {
-        this.#startFalling(ant);
+      if (!supportAnt) {
+        this.#startFall(ant, "collapse");
         return;
       }
 
-      const maxOffset = ANT_TUNING.supportHalfWidth + ANT_TUNING.climbHorizontalRange;
-      if (Math.abs(ant.position.x - supportAnt.position.x) > maxOffset) {
-        this.#startFalling(ant);
+      if (supportAnt.movement.verticalState === "falling") {
+        this.#startFall(ant, supportAnt.movement.fallMode === "collapse" ? "collapse" : "intentional");
+        return;
+      }
+
+      if (!this.#hasWalkableOverlap(ant, supportAnt)) {
+        this.#startFall(ant, "intentional");
       }
       return;
     }
@@ -49,14 +83,14 @@ export class MovementSystem {
     if (ant.movement.supportType === "wall") {
       const wall = mapSystem.getWallById(ant.movement.supportId);
       if (!wall) {
-        this.#startFalling(ant);
+        this.#startFall(ant, "collapse");
         return;
       }
 
       const minX = wall.x - ANT_TUNING.supportHalfWidth;
       const maxX = wall.x + wall.width + ANT_TUNING.supportHalfWidth;
       if (ant.position.x < minX || ant.position.x > maxX) {
-        this.#startFalling(ant);
+        this.#startFall(ant, "intentional");
       }
     }
   }
@@ -75,6 +109,11 @@ export class MovementSystem {
   }
 
   #integrateMotion(ant, deltaTime, mapSystem, ants, antById) {
+    if (ant.movement.verticalState === "falling") {
+      this.#integrateFall(ant, deltaTime, mapSystem, ants, antById);
+      return;
+    }
+
     const xIntent = ant.brainState?.xVel ?? 0;
     const yIntent = ant.brainState?.yVel ?? 0;
     const attachedLock = ant.attached;
@@ -92,7 +131,7 @@ export class MovementSystem {
     const wantsClimb = yIntent <= -ANT_TUNING.climbIntentThreshold;
     const wantsDescend = yIntent >= ANT_TUNING.climbIntentThreshold;
 
-    if (!attachedLock && ant.movement.verticalState !== "falling" && !supportAnt && wantsClimb) {
+    if (!attachedLock && !supportAnt && wantsClimb) {
       const climbTarget = this.#findClimbTarget(ant, ants);
       if (climbTarget) {
         ant.movement.supportType = "ant";
@@ -105,18 +144,23 @@ export class MovementSystem {
         );
       }
     } else if (!attachedLock && supportAnt && wantsDescend) {
-      this.#startFalling(ant);
+      this.#startFall(ant, "intentional");
     }
 
     this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale, attachedLock);
+    this.#updateSupportState(ant, antById, mapSystem);
 
     if (ant.movement.verticalState === "falling") {
       this.#integrateFall(ant, deltaTime, mapSystem, ants, antById);
       return;
     }
 
-    if (supportAnt) {
-      const targetY = getAntSupportTopY(supportAnt);
+    const currentSupportAnt = ant.movement.supportType === "ant"
+      ? antById.get(ant.movement.supportId)
+      : null;
+
+    if (currentSupportAnt) {
+      const targetY = getAntSupportTopY(currentSupportAnt);
       const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
       ant.position.y = nextY;
       ant.velocity.y = 0;
@@ -179,11 +223,36 @@ export class MovementSystem {
   }
 
   #integrateFall(ant, deltaTime, mapSystem, ants, antById) {
+    ant.velocity.x = 0;
     ant.velocity.y = Math.min(ant.velocity.y + ANT_TUNING.gravity * deltaTime, ANT_TUNING.maxFallSpeed);
 
     const currentY = ant.position.y;
     const nextY = currentY + ant.velocity.y * deltaTime;
-    const landingSurface = mapSystem.findLandingSurface(ant.position.x, currentY, ants.filter((candidate) => candidate.id !== ant.id));
+
+    if (ant.movement.fallMode === "collapse") {
+      while (ant.movement.collapseScatterNextY != null && nextY >= ant.movement.collapseScatterNextY) {
+        ant.position.x = clamp(
+          ant.position.x + this.#randomScatterDirection() * ANT_TUNING.collapseScatterStepX,
+          24,
+          1280 - 24
+        );
+        ant.movement.collapseScatterNextY += ANT_TUNING.collapseScatterStepY;
+      }
+
+      if (nextY >= ant.movement.groundY) {
+        this.#landOnGround(ant);
+        return;
+      }
+
+      ant.position.y = nextY;
+      return;
+    }
+
+    const landingSurface = mapSystem.findLandingSurface(
+      ant.position.x,
+      currentY,
+      ants.filter((candidate) => candidate.id !== ant.id)
+    );
 
     if (landingSurface && nextY >= landingSurface.y) {
       this.#landOnSurface(ant, landingSurface, antById);
@@ -193,10 +262,25 @@ export class MovementSystem {
     ant.position.y = nextY;
   }
 
+  #landOnGround(ant) {
+    ant.velocity.y = 0;
+    ant.position.y = ant.movement.groundY;
+    ant.movement.supportType = "ground";
+    ant.movement.supportId = null;
+    ant.movement.localSupportOffsetX = 0;
+    ant.movement.verticalState = "grounded";
+    ant.movement.fallMode = null;
+    ant.movement.collapseScatterNextY = null;
+    ant.movement.fallCounted = false;
+  }
+
   #landOnSurface(ant, surface, antById) {
     ant.velocity.y = 0;
     ant.position.x = surface.x;
     ant.position.y = surface.y;
+    ant.movement.fallMode = null;
+    ant.movement.collapseScatterNextY = null;
+    ant.movement.fallCounted = false;
 
     if (surface.type === "ground") {
       ant.movement.supportType = "ground";
@@ -217,9 +301,7 @@ export class MovementSystem {
 
     const supportAnt = antById.get(surface.id);
     if (!supportAnt) {
-      ant.movement.supportType = "ground";
-      ant.movement.supportId = null;
-      ant.movement.verticalState = "grounded";
+      this.#landOnGround(ant);
       return;
     }
 
@@ -270,6 +352,81 @@ export class MovementSystem {
     return bestTarget;
   }
 
+  #resolveUnstableStacks(ants, antById) {
+    const childrenBySupportId = new Map();
+
+    for (const ant of ants) {
+      if (ant.movement.supportType !== "ant" || ant.movement.verticalState === "falling") {
+        continue;
+      }
+
+      if (!childrenBySupportId.has(ant.movement.supportId)) {
+        childrenBySupportId.set(ant.movement.supportId, []);
+      }
+      childrenBySupportId.get(ant.movement.supportId).push(ant);
+    }
+
+    const collapseIds = new Set();
+
+    for (const ant of ants) {
+      if (ant.movement.supportType !== "ant") {
+        continue;
+      }
+
+      if (childrenBySupportId.has(ant.id)) {
+        continue;
+      }
+
+      const chain = [ant];
+      let current = ant;
+
+      while (current.movement.supportType === "ant") {
+        const supportAnt = antById.get(current.movement.supportId);
+        if (!supportAnt) {
+          break;
+        }
+
+        if (!this.#hasWalkableOverlap(current, supportAnt)) {
+          this.#startFall(current, "intentional");
+          break;
+        }
+
+        if (supportAnt.attached) {
+          if (chain.length > 2) {
+            const excessFreeAnts = chain.slice(0, chain.length - 2);
+            for (const collapsingAnt of excessFreeAnts) {
+              collapseIds.add(collapsingAnt.id);
+            }
+          }
+          break;
+        }
+
+        if (supportAnt.movement.supportType === "ground" || supportAnt.movement.supportType === "wall") {
+          if (chain.length >= 2) {
+            for (const collapsingAnt of chain) {
+              collapseIds.add(collapsingAnt.id);
+            }
+          }
+          break;
+        }
+
+        if (supportAnt.movement.supportType !== "ant") {
+          break;
+        }
+
+        chain.push(supportAnt);
+        current = supportAnt;
+      }
+    }
+
+    for (const antId of collapseIds) {
+      const collapsingAnt = antById.get(antId);
+      if (collapsingAnt) {
+        this.#startFall(collapsingAnt, "collapse");
+      }
+    }
+  }
+
   #getStaticSupportY(ant, mapSystem) {
     if (ant.movement.supportType === "wall") {
       const wall = mapSystem.getWallById(ant.movement.supportId);
@@ -279,6 +436,10 @@ export class MovementSystem {
     }
 
     return ant.movement.groundY;
+  }
+
+  #hasWalkableOverlap(upperAnt, lowerAnt) {
+    return Math.abs(upperAnt.position.x - lowerAnt.position.x) <= getSupportCoverageLimit();
   }
 
   #moveTowardsY(currentY, targetY, deltaTime) {
@@ -291,7 +452,7 @@ export class MovementSystem {
     return currentY + Math.sign(delta) * Math.min(Math.abs(delta), maxStep);
   }
 
-  #startFalling(ant) {
+  #startFall(ant, mode) {
     if (ant.movement.verticalState !== "falling") {
       ant.movement.fallStartY = ant.position.y;
       this.totalFalls += 1;
@@ -301,7 +462,18 @@ export class MovementSystem {
     ant.movement.supportId = null;
     ant.movement.localSupportOffsetX = 0;
     ant.movement.verticalState = "falling";
+    ant.movement.fallMode = mode;
+    ant.movement.fallCounted = true;
+    ant.movement.collapseScatterNextY = mode === "collapse"
+      ? ant.position.y + ANT_TUNING.collapseScatterStepY
+      : null;
+    ant.velocity.x = 0;
     ant.velocity.y = Math.max(ant.velocity.y, 0);
+  }
+
+  #randomScatterDirection() {
+    const directions = [-1, 0, 1];
+    return directions[Math.floor(this.random() * directions.length)];
   }
 
   #syncVisualState(ant) {
@@ -337,6 +509,3 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
-
-
-

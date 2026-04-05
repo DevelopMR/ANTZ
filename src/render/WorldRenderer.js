@@ -94,8 +94,7 @@ function formatBrainDebug(ant, simulation) {
   lines.push(`intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`);
   lines.push(`state ${ant.movement?.verticalState ?? "unknown"}`);
   lines.push(`support ${ant.movement?.supportType ?? "unknown"}`);
-  lines.push(`falls ${simulation?.movementSystem?.totalFalls ?? 0}`);
-  lines.push(`falling ants ${(simulation?.ants ?? []).filter((candidate) => candidate.movement?.verticalState === "falling").length}`);
+  lines.push(`fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`);
 
   return lines.join("\n");
 }
@@ -377,5 +376,6 @@ export class WorldRenderer {
     });
   }
 }
+
 
 

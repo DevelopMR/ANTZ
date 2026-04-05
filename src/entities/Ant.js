@@ -59,6 +59,9 @@ export class Ant {
       verticalState: "grounded",
       localSupportOffsetX: 0,
       fallStartY: movementProfile.groundY,
+      fallMode: null,
+      fallCounted: false,
+      collapseScatterNextY: null,
     };
 
     this.attachment = {
@@ -73,3 +76,4 @@ export class Ant {
     };
   }
 }
+
