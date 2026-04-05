@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 100,
+  antCount: 40,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -46,13 +46,13 @@ export const ANT_TUNING = {
   graspNeighborRadiusX: 34,
   graspNeighborRadiusY: 24,
   graspHardRejectThreshold: 0.12,
-  graspSuccessThresholdPerAnt: 0.42,
-  graspHoldThreshold: 0.3,
+  graspSuccessThresholdPerAnt: 0.5, // from .42
+  graspHoldThreshold: 0.35, // from .3
   graspThrillBoostMin: 0.08,
   graspThrillBoostMax: 0.22,
   graspThrillDecayPerSecond: 0.08,
-  graspPollCooldownMin: 0.45,
-  graspPollCooldownMax: 1.2,
+  graspPollCooldownMin: 0.40, // from .3
+  graspPollCooldownMax: 1.4, // from 1.2
   visualStateCycle: ["standing", "walking", "reaching", "walking", "grasping"],
   animationTickRate: 12,
   animationFps: {
