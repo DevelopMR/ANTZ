@@ -66,12 +66,16 @@ function settleOrFall(ant) {
   ant.movement.bounceCount = 0;
 }
 
+function getAntSupportTopY(ant) {
+  return ant.position.y - ANT_TUNING.supportHeight;
+}
+
 export class PhysicsSystem {
   constructor(random = Math.random) {
     this.random = random;
   }
 
-  update(ants, deltaTime) {
+  update(ants, deltaTime, mapSystem) {
     const antById = new Map(ants.map((ant) => [ant.id, ant]));
     const brokenLinks = [];
 
@@ -118,6 +122,7 @@ export class PhysicsSystem {
     }
 
     this.#resolveFallingImpacts(ants);
+    this.#enforceSupportFloors(ants, antById, mapSystem);
 
     for (const ant of ants) {
       refreshAttachedState(ant);
@@ -317,6 +322,54 @@ export class PhysicsSystem {
         ant.physics.lastImpactId = targetAnt.id;
         ant.physics.impactCooldown = 0.05;
         break;
+      }
+    }
+  }
+
+  #enforceSupportFloors(ants, antById, mapSystem) {
+    for (const ant of ants) {
+      if (ant.movement.verticalState === "falling") {
+        continue;
+      }
+
+      if (ant.position.y > ant.movement.groundY) {
+        ant.position.y = ant.movement.groundY;
+        ant.velocity.y = Math.min(ant.velocity.y, 0);
+      }
+
+      if (ant.movement.supportType === "ground") {
+        ant.position.y = ant.movement.groundY;
+        ant.velocity.y = Math.min(ant.velocity.y, 0);
+        ant.movement.verticalState = "grounded";
+        continue;
+      }
+
+      if (ant.movement.supportType === "wall") {
+        const wall = mapSystem?.getWallById?.(ant.movement.supportId);
+        if (!wall) {
+          continue;
+        }
+
+        const wallTopY = wall.y - ANT_TUNING.supportHeight;
+        if (ant.position.y > wallTopY) {
+          ant.position.y = wallTopY;
+          ant.velocity.y = Math.min(ant.velocity.y, 0);
+        }
+        continue;
+      }
+
+      if (ant.movement.supportType === "ant") {
+        const supportAnt = antById.get(ant.movement.supportId);
+        if (!supportAnt || supportAnt.movement.verticalState === "falling") {
+          continue;
+        }
+
+        const supportTopY = getAntSupportTopY(supportAnt);
+        if (!ant.attached && ant.position.y > supportTopY) {
+          ant.position.y = supportTopY;
+          ant.velocity.y = Math.min(ant.velocity.y, 0);
+          ant.movement.verticalState = "perched";
+        }
       }
     }
   }
