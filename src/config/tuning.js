@@ -34,6 +34,8 @@ export const ANT_TUNING = {
   climbIntentThreshold: 0.18,
   climbHorizontalRange: 22,
   supportSnapDistance: 3,
+  collapseScatterStepX: 18,
+  collapseScatterStepY: 14,
   gravity: 320,
   maxFallSpeed: 220,
   maxSafeFallDistance: WORLD_HEIGHT * 0.5,
@@ -110,6 +112,7 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+
 
 
 
