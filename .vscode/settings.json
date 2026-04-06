@@ -1,0 +1,28 @@
+{
+  "cSpell.configFile": "${workspaceFolder}/cspell.json",
+  "cSpell.enableFiletypes": [
+    "plaintext",
+    "markdown",
+    "javascript",
+    "json",
+    "git-commit",
+    "scminput"
+  ],
+  "cSpell.enabledLanguageIds": [
+    "plaintext",
+    "markdown",
+    "javascript",
+    "json",
+    "git-commit",
+    "scminput"
+  ],
+  "cSpell.words": [
+    "ANTZ",
+    "Codex",
+    "PixiJS",
+    "graspIntent",
+    "pheromone",
+    "xVel",
+    "yVel"
+  ]
+}

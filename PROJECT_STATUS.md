@@ -59,6 +59,16 @@ At minimum:
 - support classification is still local and lightweight, not a full structural solver
 - collapse lands on ground only for now to keep code and gameplay simple
 
+## Environment Status
+- current session focused on toolchain cleanup rather than simulation changes
+- no game code was modified during the tooling session
+- `git` was upgraded and now reports `2.53.0.windows.2`
+- machine-wide GitHub CLI was installed at `C:\Program Files\GitHub CLI\gh.exe`
+- `gh` now resolves on PATH
+- `winget` and `rg` were repaired by prepending their working install directories to the user PATH
+- `rg` now resolves as a standard CLI instead of relying on the editor-bundled copy
+- preferred package-manager standard going forward is `winget` for core machine tools
+
 ## Next Phase
 Phase 5 - Physics Constraints
 
@@ -67,3 +77,14 @@ Primary focus for the next phase:
 - make grasped groups behave more like cohesive platforms and sheets
 - improve stability handling, load transfer, and failure behavior
 - preserve readable, believable motion without jumping ahead to later food/reward systems
+
+## Immediate Next Actions
+1. Open a fresh terminal and verify:
+   `git --version`, `gh --version`, `rg --version`
+2. Also verify:
+   `winget --version`
+3. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting Phase 5 work
+4. Resume with a Phase 5 plan only after tool verification is clean
+
+## Related Handoff Note
+- see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the full restart-safe tooling and session handoff

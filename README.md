@@ -58,6 +58,8 @@ Then open:
 http://localhost:8000
 ```
 
+For the shared debug and review workflow, see [WORKFLOW.md](/d:/dev/ANTZ/WORKFLOW.md).
+
 ## Current Prototype Notes
 
 The current build intentionally avoids global map knowledge for the ants.

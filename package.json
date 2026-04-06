@@ -5,6 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/dev-server.js",
-    "dev": "node scripts/dev-server.js"
+    "dev": "node scripts/dev-server.js",
+    "tools:check": "node tooling/check-cli.js",
+    "gh:status": "node tooling/gh-status.js",
+    "spellcheck": "cspell --no-progress --show-context --show-suggestions \"**/*.{md,js,json}\"",
+    "spellcheck:words": "cspell trace graspIntent pheromone PixiJS xVel yVel"
+  },
+  "devDependencies": {
+    "cspell": "^10.0.0"
   }
 }
