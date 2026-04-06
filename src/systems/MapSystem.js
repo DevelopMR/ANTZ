@@ -1,5 +1,6 @@
 import {
   ANT_TUNING,
+  FOOD_TUNING,
   MAP_TUNING,
   SENSOR_TUNING,
   SIMULATION_TUNING,
@@ -116,7 +117,7 @@ function makePeg(id, x, y, radius) {
   };
 }
 
-function makeFood(id, x, y, radius) {
+function makeFood(id, x, y, radius, tripCount) {
   return {
     id,
     type: "food",
@@ -124,6 +125,10 @@ function makeFood(id, x, y, radius) {
     x,
     y,
     radius,
+    baseRadius: radius,
+    maxTrips: tripCount,
+    remainingTrips: tripCount,
+    available: tripCount > 0,
     climbable: false,
     occludesVision: false,
     color: MAP_TUNING.foodColor,
@@ -265,6 +270,7 @@ export class MapSystem {
     const groundTop = SIMULATION_TUNING.groundY + 8;
 
     this.ground = makeGround(groundTop);
+    this.nextDroppedFoodId = 0;
 
     this.walls = [
       makeWall("wall-0", 276, 500, 26, this.ground.y - 500),
@@ -282,16 +288,16 @@ export class MapSystem {
     ];
 
     this.foodNodes = [
-      makeFood("food-0", 372, 424, 10),
-      makeFood("food-1", 668, 302, 10),
-      makeFood("food-2", 950, 198, 10),
-      makeFood("food-3", 208, this.ground.y - 18, 9),
-      makeFood("food-4", 289, 490, 9),
-      makeFood("food-5", 853, 236, 9),
+      makeFood("food-0", 372, 424, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
+      makeFood("food-1", 668, 302, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
+      makeFood("food-2", 950, 198, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
+      makeFood("food-3", 208, this.ground.y - 18, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
+      makeFood("food-4", 289, 490, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
+      makeFood("food-5", 853, 236, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
     ];
+    this.foodNodeById = new Map(this.foodNodes.map((foodNode) => [foodNode.id, foodNode]));
 
-    this.staticSensorObjects = [this.ground, ...this.walls, ...this.pegs, ...this.foodNodes];
-    this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
+    this.#rebuildStaticSensorIndex();
   }
 
   getRenderState() {
@@ -305,6 +311,10 @@ export class MapSystem {
 
   getWallById(id) {
     return this.wallById.get(id) ?? null;
+  }
+
+  getFoodNodeById(id) {
+    return this.foodNodeById.get(id) ?? null;
   }
 
   getStaticSensorCandidates(position, radius) {
@@ -386,6 +396,10 @@ export class MapSystem {
     let totalScent = 0;
 
     for (const foodNode of this.foodNodes) {
+      if (!foodNode.available) {
+        continue;
+      }
+
       const dx = foodNode.x - position.x;
       const dy = foodNode.y - position.y;
       const distance = Math.hypot(dx, dy);
@@ -397,6 +411,51 @@ export class MapSystem {
     }
 
     return Math.min(1, totalScent);
+  }
+
+  findFullyContainedFoodNode(position, inset = FOOD_TUNING.pickupInset) {
+    for (const foodNode of this.foodNodes) {
+      if (!foodNode.available) {
+        continue;
+      }
+
+      const pickupRadius = Math.max(2, foodNode.radius - inset);
+      const distance = Math.hypot(position.x - foodNode.x, position.y - foodNode.y);
+      if (distance <= pickupRadius) {
+        return foodNode;
+      }
+    }
+
+    return null;
+  }
+
+  takeFoodUnit(foodId, amount = FOOD_TUNING.carryUnitAmount) {
+    const foodNode = this.getFoodNodeById(foodId);
+    if (!foodNode || !foodNode.available) {
+      return 0;
+    }
+
+    const taken = Math.min(amount, foodNode.remainingTrips);
+    foodNode.remainingTrips = Math.max(0, foodNode.remainingTrips - taken);
+    this.#updateFoodNodeRadius(foodNode);
+    this.#rebuildStaticSensorIndex();
+    return taken;
+  }
+
+  spawnDroppedFood(x, y, tripCount = FOOD_TUNING.carryUnitAmount) {
+    const foodNode = makeFood(
+      `dropped-food-${this.nextDroppedFoodId}`,
+      clamp(x, 28, WORLD_WIDTH - 28),
+      y,
+      FOOD_TUNING.droppedFoodRadius,
+      tripCount
+    );
+
+    this.nextDroppedFoodId += 1;
+    this.foodNodes.push(foodNode);
+    this.foodNodeById.set(foodNode.id, foodNode);
+    this.#rebuildStaticSensorIndex();
+    return foodNode;
   }
 
   constrainHorizontalMovement(ant, currentX, nextX) {
@@ -494,5 +553,24 @@ export class MapSystem {
     }
 
     return bestSurface ?? groundSurface;
+  }
+
+  #updateFoodNodeRadius(foodNode) {
+    if (foodNode.remainingTrips <= 0) {
+      foodNode.available = false;
+      foodNode.radius = 0;
+      return;
+    }
+
+    foodNode.available = true;
+    const ratio = foodNode.remainingTrips / Math.max(foodNode.maxTrips, 1);
+    const visualRatio = Math.max(FOOD_TUNING.minimumFoodRadiusRatio, ratio);
+    foodNode.radius = foodNode.baseRadius * visualRatio;
+  }
+
+  #rebuildStaticSensorIndex() {
+    const activeFoodNodes = this.foodNodes.filter((foodNode) => foodNode.available && foodNode.radius > 0);
+    this.staticSensorObjects = [this.ground, ...this.walls, ...this.pegs, ...activeFoodNodes];
+    this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
   }
 }

@@ -93,6 +93,20 @@ export class Ant {
       legs: Array.from({ length: ANT_TUNING.graspLegSlotCount }, (_, slot) => createEmptyLeg(slot)),
     };
 
+    this.food = {
+      carrying: false,
+      carriedAmount: 0,
+      sourceNodeId: null,
+      mealsEaten: 0,
+      deliveryCount: 0,
+      returnMode: "none",
+      deliveryTargetX: 0,
+      deliveryTargetY: 0,
+      saluteTimer: 0,
+      lastDeliveredAmount: 0,
+      lastDroppedAmount: 0,
+    };
+
     this.physics = {
       anchorPriority: null,
       lastBreakReason: null,

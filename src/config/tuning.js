@@ -98,6 +98,28 @@ export const PHYSICS_TUNING = {
   microVelocityClamp: 140,
 };
 
+export const FOOD_TUNING = {
+  interactionThreshold: 0.62,
+  pickupInset: 2,
+  mealUnitAmount: 1,
+  carryUnitAmount: 1,
+  carrySpeedScale: 0.75,
+  queenDeliveryOffsetX: 28,
+  queenDeliveryRadius: 18,
+  saluteDuration: 0.5,
+  spawnOnFeedMin: 1,
+  spawnOnFeedMax: 3,
+  spawnOffsetLeftMin: 18,
+  spawnOffsetLeftMax: 68,
+  droppedFoodGroundOffsetY: 18,
+  droppedFoodRadius: 8,
+  smallNodeTrips: 3,
+  largeNodeTrips: 5,
+  smallNodeRadius: 10,
+  largeNodeRadius: 14,
+  minimumFoodRadiusRatio: 0.42,
+};
+
 export const SENSOR_TUNING = {
   wedgeCount: 6,
   raysPerWedge: 3,
@@ -145,4 +167,3 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-

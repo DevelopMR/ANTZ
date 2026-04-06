@@ -1,4 +1,4 @@
-import { ANT_TUNING, PHYSICS_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, FOOD_TUNING, PHYSICS_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -18,6 +18,14 @@ function getStableSupportHalfWidth() {
 
 function hasActiveLegs(ant) {
   return ant.attachment.legs?.some((leg) => leg.active) ?? false;
+}
+
+function isSaluting(ant) {
+  return (ant.food?.saluteTimer ?? 0) > 0;
+}
+
+function isCarryingFood(ant) {
+  return ant.carryingFood || ant.food?.carrying;
 }
 
 export class MovementSystem {
@@ -141,6 +149,17 @@ export class MovementSystem {
     const supportAnt = ant.movement.supportType === "ant"
       ? antById.get(ant.movement.supportId)
       : null;
+
+    if (isSaluting(ant)) {
+      this.#integrateSaluteBeat(ant, deltaTime, mapSystem, supportAnt, antById);
+      return;
+    }
+
+    if (isCarryingFood(ant)) {
+      this.#integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById);
+      return;
+    }
+
     const wantsClimb = yIntent <= -ANT_TUNING.climbIntentThreshold;
 
     if (!attachedLock && !supportAnt && wantsClimb) {
@@ -170,34 +189,40 @@ export class MovementSystem {
       return;
     }
 
-    const currentSupportAnt = ant.movement.supportType === "ant"
-      ? antById.get(ant.movement.supportId)
-      : null;
+    this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
+  }
 
-    if (currentSupportAnt) {
-      const targetY = getAntSupportTopY(currentSupportAnt);
-      const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
-      ant.position.y = nextY;
-      ant.velocity.y = 0;
+  #integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById) {
+    const targetX = ant.food.deliveryTargetX || ant.position.x;
+    const deltaX = targetX - ant.position.x;
+    const xIntent = clamp(deltaX / 32, -1, 1);
+    const carrySpeedScale = FOOD_TUNING.carrySpeedScale;
 
-      if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
-        ant.position.y = targetY;
-        ant.movement.verticalState = "perched";
-      } else {
-        ant.movement.verticalState = ant.movement.verticalState === "descending" ? "descending" : "climbing";
-      }
+    ant.movement.desiredDirection = xIntent;
+    this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, carrySpeedScale);
+    this.#updateSupportState(ant, antById, mapSystem);
+
+    if (ant.movement.verticalState === "falling") {
       return;
     }
 
-    const targetY = this.#getStaticSupportY(ant, mapSystem);
-    const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
-    ant.position.y = nextY;
-    ant.velocity.y = 0;
+    this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
 
-    if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
-      ant.position.y = targetY;
-      ant.movement.verticalState = "grounded";
+    if (Math.abs(deltaX) <= FOOD_TUNING.queenDeliveryRadius * 0.8) {
+      ant.velocity.x *= 0.72;
     }
+  }
+
+  #integrateSaluteBeat(ant, deltaTime, mapSystem, supportAnt, antById) {
+    ant.velocity.x *= 0.5;
+    ant.velocity.y = 0;
+    ant.movement.desiredDirection = 0;
+
+    if (supportAnt && supportAnt.movement.verticalState !== "falling") {
+      ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
+    }
+
+    this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
   }
 
   #integrateAttachedMotion(ant, deltaTime, supportAnt) {
@@ -230,7 +255,7 @@ export class MovementSystem {
       );
 
       ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
-      ant.velocity.x = supportAnt.velocity.x;
+      ant.velocity.x = supportAnt.velocity.x + ant.velocity.x * 0.15;
     } else {
       const currentX = ant.position.x;
       const nextX = currentX + ant.velocity.x * deltaTime;
@@ -246,6 +271,37 @@ export class MovementSystem {
 
     if (Math.abs(ant.velocity.x) > 0.02) {
       ant.facing = ant.velocity.x >= 0 ? 1 : -1;
+    }
+  }
+
+  #resolveVerticalPlacement(ant, deltaTime, mapSystem, antById) {
+    const currentSupportAnt = ant.movement.supportType === "ant"
+      ? antById.get(ant.movement.supportId)
+      : null;
+
+    if (currentSupportAnt) {
+      const targetY = getAntSupportTopY(currentSupportAnt);
+      const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
+      ant.position.y = nextY;
+      ant.velocity.y = 0;
+
+      if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
+        ant.position.y = targetY;
+        ant.movement.verticalState = "perched";
+      } else {
+        ant.movement.verticalState = ant.movement.verticalState === "descending" ? "descending" : "climbing";
+      }
+      return;
+    }
+
+    const targetY = this.#getStaticSupportY(ant, mapSystem);
+    const nextY = this.#moveTowardsY(ant.position.y, targetY, deltaTime);
+    ant.position.y = nextY;
+    ant.velocity.y = 0;
+
+    if (Math.abs(targetY - ant.position.y) <= ANT_TUNING.supportSnapDistance) {
+      ant.position.y = targetY;
+      ant.movement.verticalState = "grounded";
     }
   }
 
@@ -508,8 +564,18 @@ export class MovementSystem {
   }
 
   #syncVisualState(ant) {
+    if (isSaluting(ant)) {
+      ant.visualState = "reaching";
+      return;
+    }
+
     if (ant.attached || hasActiveLegs(ant)) {
       ant.visualState = "grasping";
+      return;
+    }
+
+    if (isCarryingFood(ant)) {
+      ant.visualState = "walking";
       return;
     }
 

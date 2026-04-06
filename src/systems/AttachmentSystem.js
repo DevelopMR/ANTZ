@@ -186,7 +186,7 @@ export class AttachmentSystem {
   #attemptPerchedGrasp(ant, ants, antById, mapSystem) {
     refreshAttachedState(ant);
 
-    if (ant.attached || ant.attachment.pollCooldown > 0) {
+    if (ant.attached || ant.attachment.pollCooldown > 0 || ant.carryingFood || (ant.food?.saluteTimer ?? 0) > 0) {
       return;
     }
 
@@ -195,7 +195,7 @@ export class AttachmentSystem {
     }
 
     const supportAnt = antById.get(ant.movement.supportId);
-    if (!supportAnt || supportAnt.attached) {
+    if (!supportAnt || supportAnt.attached || supportAnt.carryingFood || (supportAnt.food?.saluteTimer ?? 0) > 0) {
       return;
     }
 
@@ -243,7 +243,7 @@ export class AttachmentSystem {
         return false;
       }
       refreshAttachedState(candidate);
-      if (candidate.attached) {
+      if (candidate.attached || candidate.carryingFood || (candidate.food?.saluteTimer ?? 0) > 0) {
         return false;
       }
       if (candidate.connectionIds.length >= ANT_TUNING.maxConnections) {
@@ -442,6 +442,7 @@ export class AttachmentSystem {
     return randomRange(this.random, ANT_TUNING.graspPollCooldownMin, ANT_TUNING.graspPollCooldownMax);
   }
 }
+
 
 
 

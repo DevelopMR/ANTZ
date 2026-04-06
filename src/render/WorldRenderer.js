@@ -114,12 +114,20 @@ function formatBrainDebug(ant, simulation) {
   lines.push(`state ${ant.movement?.verticalState ?? "unknown"}`);
   lines.push(`support ${ant.movement?.supportType ?? "unknown"}`);
   lines.push(`legs ${activeLegCount}`);
+  lines.push(`meals ${ant.food?.mealsEaten ?? 0}`);
+  lines.push(`carry ${formatScalar(ant.food?.carriedAmount ?? 0)}`);
+  lines.push(`mode ${ant.food?.returnMode ?? "none"}`);
+  if ((ant.food?.saluteTimer ?? 0) > 0) {
+    lines.push("saluting yes");
+  }
   if (ant.physics?.lastBreakReason) {
     lines.push(`break ${ant.physics.lastBreakReason}`);
   }
   if (ant.physics?.lastImpactId != null) {
     lines.push(`impact ant ${ant.physics.lastImpactId}`);
   }
+  lines.push(`queen food ${simulation?.queen?.foodReceived ?? 0}`);
+  lines.push(`queen spawns ${simulation?.queen?.spawnedAntCount ?? 0}`);
   lines.push(`fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`);
 
   return lines.join("\n");
@@ -158,6 +166,8 @@ export class WorldRenderer {
     this.app = null;
     this.antSpriteLibrary = null;
     this.antLayer = null;
+    this.foodLayer = null;
+    this.carryOverlay = null;
     this.sensorOverlay = null;
     this.sensorLabelLayer = null;
     this.sensorLabelTexts = [];
@@ -185,13 +195,19 @@ export class WorldRenderer {
 
     this.#drawWorldBackdrop();
     this.#drawMapGeometry();
+    this.#createFoodLayer();
     this.#createGoalMarker();
     this.#createQueenMarker();
     this.#createAntViews();
+    this.#createCarryOverlay();
     this.#createSensorOverlay();
   }
 
   render(elapsedTime) {
+    this.#syncAntViews();
+    this.#drawFoodNodes();
+    this.#drawCarryOverlay();
+
     for (const antView of this.antViews) {
       antView.sync(elapsedTime);
     }
@@ -230,7 +246,7 @@ export class WorldRenderer {
   }
 
   #drawMapGeometry() {
-    const { walls, pegs, foodNodes } = this.simulation.mapSystem.getRenderState();
+    const { walls, pegs } = this.simulation.mapSystem.getRenderState();
     const geometry = new Graphics();
 
     for (const wall of walls) {
@@ -246,14 +262,56 @@ export class WorldRenderer {
       geometry.endFill();
     }
 
-    for (const foodNode of foodNodes) {
-      geometry.lineStyle(2, 0xd7f2b8, 0.7);
-      geometry.beginFill(foodNode.color);
-      geometry.drawCircle(foodNode.x, foodNode.y, foodNode.radius);
-      geometry.endFill();
-    }
-
     this.worldContainer.addChild(geometry);
+  }
+
+  #createFoodLayer() {
+    this.foodLayer = new Graphics();
+    this.worldContainer.addChild(this.foodLayer);
+    this.#drawFoodNodes();
+  }
+
+  #drawFoodNodes() {
+    const { foodNodes } = this.simulation.mapSystem.getRenderState();
+    this.foodLayer.clear();
+
+    for (const foodNode of foodNodes) {
+      if (!foodNode.available || foodNode.radius <= 0) {
+        continue;
+      }
+
+      const ratio = foodNode.remainingTrips / Math.max(foodNode.maxTrips, 1);
+      const alpha = clamp(0.45 + ratio * 0.55, 0.45, 1);
+      this.foodLayer.lineStyle(2, 0xd7f2b8, 0.7);
+      this.foodLayer.beginFill(foodNode.color, alpha);
+      this.foodLayer.drawCircle(foodNode.x, foodNode.y, foodNode.radius);
+      this.foodLayer.endFill();
+    }
+  }
+
+  #createCarryOverlay() {
+    this.carryOverlay = new Graphics();
+    this.worldContainer.addChild(this.carryOverlay);
+  }
+
+  #drawCarryOverlay() {
+    this.carryOverlay.clear();
+
+    for (const ant of this.simulation.ants) {
+      if (ant.carryingFood) {
+        const carryX = ant.position.x + ant.facing * 12;
+        const carryY = ant.position.y - 20;
+        this.carryOverlay.lineStyle(1, 0xeaf7d2, 0.9);
+        this.carryOverlay.beginFill(0x5f9b42, 0.95);
+        this.carryOverlay.drawCircle(carryX, carryY, 4.5);
+        this.carryOverlay.endFill();
+      }
+
+      if ((ant.food?.saluteTimer ?? 0) > 0) {
+        this.carryOverlay.lineStyle(2, 0xf1ddb5, 0.85);
+        this.carryOverlay.drawCircle(ant.position.x, ant.position.y - 18, 8);
+      }
+    }
   }
 
   #createSensorOverlay() {
@@ -423,18 +481,24 @@ export class WorldRenderer {
   }
 
   #createAntViews() {
-    this.antLayer = new ParticleContainer(this.simulation.ants.length, {
+    this.antLayer = new ParticleContainer(Math.max(this.simulation.ants.length + 256, 512), {
       position: true,
       scale: true,
       uvs: true,
     });
     this.worldContainer.addChild(this.antLayer);
 
-    this.antViews = this.simulation.ants.map((ant) => {
+    this.antViews = [];
+    this.#syncAntViews();
+  }
+
+  #syncAntViews() {
+    while (this.antViews.length < this.simulation.ants.length) {
+      const ant = this.simulation.ants[this.antViews.length];
       const antView = new AntView(ant, this.antSpriteLibrary);
       this.antLayer.addChild(antView.sprite);
       antView.sync(this.simulation.elapsedTime);
-      return antView;
-    });
+      this.antViews.push(antView);
+    }
   }
 }
