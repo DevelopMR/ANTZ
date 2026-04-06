@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 50,
+  antCount: 10,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -99,7 +99,7 @@ export const PHYSICS_TUNING = {
 };
 
 export const FOOD_TUNING = {
-  interactionThreshold: 0.62,
+  interactionThreshold: 0.4,
   pickupInset: 2,
   mealUnitAmount: 1,
   carryUnitAmount: 1,

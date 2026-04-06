@@ -195,8 +195,15 @@ export class MovementSystem {
   #integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById) {
     const targetX = ant.food.deliveryTargetX || ant.position.x;
     const deltaX = targetX - ant.position.x;
-    const xIntent = clamp(deltaX / 32, -1, 1);
+    let xIntent = clamp(deltaX / 32, -1, 1);
     const carrySpeedScale = FOOD_TUNING.carrySpeedScale;
+
+    // Carriers prefer to get back to static support before making the full delivery run.
+    // On an ant back, bias toward the queen-side edge so they step off and drop to ground.
+    if (ant.movement.supportType === "ant" && supportAnt) {
+      const edgeDirection = deltaX <= 0 ? -1 : 1;
+      xIntent = edgeDirection;
+    }
 
     ant.movement.desiredDirection = xIntent;
     this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, carrySpeedScale);
@@ -606,3 +613,4 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
+
