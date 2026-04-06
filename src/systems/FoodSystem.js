@@ -43,7 +43,7 @@ export class FoodSystem {
     }
   }
 
-  #attemptFoodPickup(ant, mapSystem, queen) {
+  #attemptFoodPickup(ant, mapSystem, queen, simulationController) {
     if (ant.carryingFood || ant.food.saluteTimer > 0) {
       return;
     }
@@ -137,3 +137,4 @@ export class FoodSystem {
     return FOOD_TUNING.spawnOnFeedMin + Math.floor(this.random() * span);
   }
 }
+
