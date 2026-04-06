@@ -1,8 +1,29 @@
 import { NeuralNet } from "../ai/NeuralNet.js";
-import { NEURAL_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, NEURAL_TUNING } from "../config/tuning.js";
 
 function createVector(x = 0, y = 0) {
   return { x, y };
+}
+
+function createEmptyLeg(slot) {
+  return {
+    slot,
+    active: false,
+    targetType: null,
+    targetId: null,
+    anchorX: 0,
+    anchorY: 0,
+    targetOffsetX: 0,
+    targetOffsetY: 0,
+    preferredAngle: 0,
+    restLength: 0,
+    stiffnessScale: 1,
+    dampingScale: 1,
+    label: "",
+    debugDirectionX: 0,
+    debugDirectionY: -1,
+    stretchRatio: 1,
+  };
 }
 
 export class Ant {
@@ -62,12 +83,21 @@ export class Ant {
       fallMode: null,
       fallCounted: false,
       collapseScatterNextY: null,
+      bounceCount: 0,
     };
 
     this.attachment = {
       groupId: null,
       thrillBoost: 0,
       pollCooldown: 0,
+      legs: Array.from({ length: ANT_TUNING.graspLegSlotCount }, (_, slot) => createEmptyLeg(slot)),
+    };
+
+    this.physics = {
+      anchorPriority: null,
+      lastBreakReason: null,
+      lastImpactId: null,
+      impactCooldown: 0,
     };
 
     this.visual = {
@@ -76,4 +106,3 @@ export class Ant {
     };
   }
 }
-

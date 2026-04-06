@@ -64,3 +64,13 @@ Check the current CLI stack with:
 ```powershell
 npm run tools:check
 ```
+
+## Sandbox Notes
+
+When the sandbox starts acting flaky during large edit passes:
+
+- prefer smaller patches over large multi-file rewrites
+- create new utility files once, then edit them incrementally
+- verify npm scripts and process-spawning helpers in a normal terminal
+- prefer real helper files over long inline one-liner npm scripts
+- move system installs, auth, and PATH changes to the normal terminal or an escalated shell

@@ -48,13 +48,22 @@ export const ANT_TUNING = {
   graspNeighborRadiusX: 34,
   graspNeighborRadiusY: 24,
   graspHardRejectThreshold: 0.12,
-  graspSuccessThresholdPerAnt: 0.5, // from .42
-  graspHoldThreshold: 0.35, // from .3
+  graspSuccessThresholdPerAnt: 0.5,
+  graspHoldThreshold: 0.35,
   graspThrillBoostMin: 0.08,
   graspThrillBoostMax: 0.22,
   graspThrillDecayPerSecond: 0.08,
-  graspPollCooldownMin: 0.40, // from .3
-  graspPollCooldownMax: 1.4, // from 1.2
+  graspPollCooldownMin: 0.40,
+  graspPollCooldownMax: 1.4,
+  graspLegSlotCount: 4,
+  wallAnchorReachX: 18,
+  wallAnchorReachY: 34,
+  groundAnchorOffsetX: 10,
+  wallAnchorOffsetY: 10,
+  extraAnchorSpreadX: 8,
+  maxBounceCount: 5,
+  tumbleBounceSpeedX: 72,
+  tumbleBounceSpeedY: 138,
   visualStateCycle: ["standing", "walking", "reaching", "walking", "grasping"],
   animationTickRate: 12,
   animationFps: {
@@ -63,6 +72,27 @@ export const ANT_TUNING = {
     reaching: 4.2,
     grasping: 2.2,
   },
+};
+
+export const PHYSICS_TUNING = {
+  attachedGravityScale: 0.6,
+  attachedLinearDamping: 0.93,
+  solverIterations: 5,
+  legRestLength: 18,
+  legRestLengthVariance: 4,
+  legStiffness: 0.36,
+  legDamping: 0.18,
+  legAngularBias: 0.24,
+  legAnchorPull: 0.48,
+  legBreakStretchRatio: 1.8,
+  legBreakDistanceBuffer: 10,
+  positionCorrectionFactor: 0.42,
+  impactBounceFactor: 0.52,
+  impactTransferFactor: 0.24,
+  impactHorizontalJitter: 34,
+  supportRideFollow: 0.72,
+  supportRideVerticalSnap: 0.42,
+  microVelocityClamp: 140,
 };
 
 export const SENSOR_TUNING = {
@@ -112,8 +142,3 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
-
-
-
-

@@ -12,6 +12,14 @@ const SENSOR_TEXT_STYLE = {
   strokeThickness: 3,
   lineJoin: "round",
 };
+const LEG_TEXT_STYLE = {
+  fontFamily: "Consolas, 'Courier New', monospace",
+  fontSize: 9,
+  fill: 0x213327,
+  stroke: 0xf4e6c7,
+  strokeThickness: 3,
+  lineJoin: "round",
+};
 const BRAIN_TEXT_STYLE = {
   fontFamily: "Consolas, 'Courier New', monospace",
   fontSize: 11,
@@ -66,10 +74,21 @@ function formatWedgeCensus(wedge) {
   return lines.join("\n");
 }
 
+function formatLegDebug(leg) {
+  const target = leg.targetType === "ant"
+    ? `a${leg.targetId}`
+    : leg.targetType === "wall"
+      ? "wall"
+      : "ground";
+
+  return `${leg.slot + 1} ${target}\nx${leg.stretchRatio.toFixed(2)}`;
+}
+
 function formatBrainDebug(ant, simulation) {
   const inputs = ant.brainState?.inputs ?? [];
   const outputs = ant.brainState?.outputs ?? [];
   const wedgeNames = SENSOR_TUNING.wedgeNames;
+  const activeLegCount = ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
   const lines = [
     `Tracked ant ${ant.id}`,
     "Inputs",
@@ -94,6 +113,13 @@ function formatBrainDebug(ant, simulation) {
   lines.push(`intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`);
   lines.push(`state ${ant.movement?.verticalState ?? "unknown"}`);
   lines.push(`support ${ant.movement?.supportType ?? "unknown"}`);
+  lines.push(`legs ${activeLegCount}`);
+  if (ant.physics?.lastBreakReason) {
+    lines.push(`break ${ant.physics.lastBreakReason}`);
+  }
+  if (ant.physics?.lastImpactId != null) {
+    lines.push(`impact ant ${ant.physics.lastImpactId}`);
+  }
   lines.push(`fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`);
 
   return lines.join("\n");
@@ -135,6 +161,7 @@ export class WorldRenderer {
     this.sensorOverlay = null;
     this.sensorLabelLayer = null;
     this.sensorLabelTexts = [];
+    this.legLabelTexts = [];
     this.brainDebugText = null;
   }
 
@@ -243,6 +270,14 @@ export class WorldRenderer {
       return label;
     });
 
+    this.legLabelTexts = Array.from({ length: 4 }, () => {
+      const label = new Text("", LEG_TEXT_STYLE);
+      label.anchor?.set?.(0.5, 0.5);
+      label.visible = false;
+      this.sensorLabelLayer.addChild(label);
+      return label;
+    });
+
     this.brainDebugText = new Text("", BRAIN_TEXT_STYLE);
     this.brainDebugText.position.set(18, 18);
     this.worldContainer.addChild(this.brainDebugText);
@@ -253,6 +288,9 @@ export class WorldRenderer {
     if (!ant || !ant.sensorState?.rays || !ant.sensorState?.wedges) {
       this.sensorOverlay.clear();
       for (const label of this.sensorLabelTexts) {
+        label.visible = false;
+      }
+      for (const label of this.legLabelTexts) {
         label.visible = false;
       }
       if (this.brainDebugText) {
@@ -323,6 +361,30 @@ export class WorldRenderer {
       label.visible = true;
     }
 
+    const activeLegs = ant.attachment?.legs?.filter((leg) => leg.active) ?? [];
+    for (let index = 0; index < this.legLabelTexts.length; index += 1) {
+      const label = this.legLabelTexts[index];
+      const leg = activeLegs[index];
+      if (!leg) {
+        label.visible = false;
+        continue;
+      }
+
+      const directionX = leg.debugDirectionX || Math.cos(leg.preferredAngle || 0);
+      const directionY = leg.debugDirectionY || Math.sin(leg.preferredAngle || 0);
+      const radius = 34;
+      label.text = formatLegDebug(leg);
+      if (label.anchor) {
+        label.anchor.set(0.5, 0.5);
+      }
+      label.position.set(
+        sensorOrigin.x + directionX * radius,
+        sensorOrigin.y + directionY * radius
+      );
+      clampLabelToWorld(label);
+      label.visible = true;
+    }
+
     if (this.brainDebugText) {
       this.brainDebugText.text = formatBrainDebug(ant, this.simulation);
     }
@@ -376,6 +438,3 @@ export class WorldRenderer {
     });
   }
 }
-
-
-

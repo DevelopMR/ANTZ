@@ -1,4 +1,4 @@
-import { ANT_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, PHYSICS_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -10,6 +10,10 @@ function getAntSupportTopY(ant) {
 
 function getWalkableSupportLimit() {
   return ANT_TUNING.supportHalfWidth;
+}
+
+function hasActiveLegs(ant) {
+  return ant.attachment.legs?.some((leg) => leg.active) ?? false;
 }
 
 export class MovementSystem {
@@ -55,10 +59,15 @@ export class MovementSystem {
     }
 
     ant.movement.fallCounted = false;
+    ant.movement.bounceCount = 0;
   }
 
   #updateSupportState(ant, antById, mapSystem) {
     if (ant.movement.verticalState === "falling") {
+      return;
+    }
+
+    if (ant.attached || hasActiveLegs(ant)) {
       return;
     }
 
@@ -116,7 +125,7 @@ export class MovementSystem {
 
     const xIntent = ant.brainState?.xVel ?? 0;
     const yIntent = ant.brainState?.yVel ?? 0;
-    const attachedLock = ant.attached;
+    const attachedLock = ant.attached || hasActiveLegs(ant);
     const postureSpeedScale = ant.visualState === "walking"
       ? 1
       : ant.visualState === "reaching"
@@ -144,7 +153,12 @@ export class MovementSystem {
       }
     }
 
-    this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale, attachedLock);
+    if (attachedLock) {
+      this.#integrateAttachedMotion(ant, deltaTime, supportAnt);
+      return;
+    }
+
+    this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale);
     this.#updateSupportState(ant, antById, mapSystem);
 
     if (ant.movement.verticalState === "falling") {
@@ -182,22 +196,34 @@ export class MovementSystem {
     }
   }
 
-  #applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale, attachedLock) {
+  #integrateAttachedMotion(ant, deltaTime, supportAnt) {
+    ant.movement.desiredDirection = ant.brainState?.xVel ?? 0;
+    ant.velocity.x *= 0.94;
+    ant.velocity.y *= 0.98;
+
+    if (!supportAnt || supportAnt.attached || supportAnt.movement.verticalState === "falling") {
+      return;
+    }
+
+    ant.velocity.x += (supportAnt.velocity.x - ant.velocity.x) * PHYSICS_TUNING.supportRideFollow * deltaTime;
+    const targetY = getAntSupportTopY(supportAnt);
+    ant.position.y += (targetY - ant.position.y) * PHYSICS_TUNING.supportRideVerticalSnap;
+  }
+
+  #applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale) {
     const xForce = ANT_TUNING.forwardDrive * ant.traits.forwardBias * xIntent * postureSpeedScale;
 
     ant.movement.desiredDirection = xIntent;
-    ant.velocity.x += attachedLock ? 0 : xForce * deltaTime;
-    ant.velocity.x *= attachedLock ? 0.25 : SIMULATION_TUNING.linearDamping;
+    ant.velocity.x += xForce * deltaTime;
+    ant.velocity.x *= SIMULATION_TUNING.linearDamping;
     ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.maxSpeed, ANT_TUNING.maxSpeed);
 
     if (supportAnt) {
-      if (!attachedLock) {
-        ant.movement.localSupportOffsetX = clamp(
-          ant.movement.localSupportOffsetX + xIntent * ANT_TUNING.maxSpeed * 0.35 * deltaTime,
-          -ANT_TUNING.supportHalfWidth,
-          ANT_TUNING.supportHalfWidth
-        );
-      }
+      ant.movement.localSupportOffsetX = clamp(
+        ant.movement.localSupportOffsetX + xIntent * ANT_TUNING.maxSpeed * 0.35 * deltaTime,
+        -ANT_TUNING.supportHalfWidth,
+        ANT_TUNING.supportHalfWidth
+      );
 
       ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
       ant.velocity.x = supportAnt.velocity.x;
@@ -220,7 +246,7 @@ export class MovementSystem {
   }
 
   #integrateFall(ant, deltaTime, mapSystem, ants, antById) {
-    ant.velocity.x = 0;
+    ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.tumbleBounceSpeedX, ANT_TUNING.tumbleBounceSpeedX);
     ant.velocity.y = Math.min(ant.velocity.y + ANT_TUNING.gravity * deltaTime, ANT_TUNING.maxFallSpeed);
 
     const currentY = ant.position.y;
@@ -235,14 +261,6 @@ export class MovementSystem {
         );
         ant.movement.collapseScatterNextY += ANT_TUNING.collapseScatterStepY;
       }
-
-      if (nextY >= ant.movement.groundY) {
-        this.#landOnGround(ant);
-        return;
-      }
-
-      ant.position.y = nextY;
-      return;
     }
 
     const landingSurface = mapSystem.findLandingSurface(
@@ -269,6 +287,7 @@ export class MovementSystem {
     ant.movement.fallMode = null;
     ant.movement.collapseScatterNextY = null;
     ant.movement.fallCounted = false;
+    ant.movement.bounceCount = 0;
   }
 
   #landOnSurface(ant, surface, antById) {
@@ -278,6 +297,7 @@ export class MovementSystem {
     ant.movement.fallMode = null;
     ant.movement.collapseScatterNextY = null;
     ant.movement.fallCounted = false;
+    ant.movement.bounceCount = 0;
 
     if (surface.type === "ground") {
       ant.movement.supportType = "ground";
@@ -353,6 +373,9 @@ export class MovementSystem {
     const childrenBySupportId = new Map();
 
     for (const ant of ants) {
+      if (ant.attached) {
+        continue;
+      }
       if (ant.movement.supportType !== "ant" || ant.movement.verticalState !== "perched") {
         continue;
       }
@@ -366,6 +389,9 @@ export class MovementSystem {
     const collapseIds = new Set();
 
     for (const ant of ants) {
+      if (ant.attached) {
+        continue;
+      }
       if (ant.movement.supportType !== "ant" || ant.movement.verticalState !== "perched") {
         continue;
       }
@@ -468,7 +494,7 @@ export class MovementSystem {
     ant.movement.collapseScatterNextY = mode === "collapse"
       ? ant.position.y + ANT_TUNING.collapseScatterStepY
       : null;
-    ant.velocity.x = 0;
+    ant.movement.bounceCount = 0;
     ant.velocity.y = Math.max(ant.velocity.y, 0);
   }
 
@@ -478,7 +504,7 @@ export class MovementSystem {
   }
 
   #syncVisualState(ant) {
-    if (ant.attached) {
+    if (ant.attached || hasActiveLegs(ant)) {
       ant.visualState = "grasping";
       return;
     }
@@ -510,7 +536,3 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
-
-
-
-
