@@ -30,6 +30,9 @@ export const ANT_TUNING = {
   collisionRadius: 11,
   supportHeight: 26,
   supportHalfWidth: 12,
+  supportTopFlatHalfWidth: 8,
+  supportEdgeRollZone: 4,
+  wallSupportPadding: 4,
   climbSpeed: 58,
   climbIntentThreshold: 0.18,
   climbHorizontalRange: 22,
@@ -142,3 +145,4 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+

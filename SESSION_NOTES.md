@@ -2,19 +2,20 @@
 
 ## Session Purpose
 
-This note is a restart-safe handoff for the current state of the ANTZ repository and the local developer tooling conversation.
+This note is a restart-safe handoff for the current state of the ANTZ repository and the local developer workflow.
 
-Primary goals from this session:
-- re-check the tools and libraries available to Codex in the local environment
-- standardize the core CLI toolchain so future sessions are more reliable
-- preserve enough context to resume the ant simulation work without re-discovery
+Primary goals covered across this session:
+- stabilize the local Codex + terminal toolchain
+- add repo-level workflow helpers and spellcheck
+- complete Phase 5 physics constraints and its first polish pass
+- preserve enough context to resume cleanly into Phase 6
 
 ## Project Snapshot
 
 - Repository: `d:\dev\ANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
-- Current documented phase: `Phase 4 - Grasp Intent Complete`
-- Next intended phase: `Phase 5 - Physics Constraints`
+- Current documented phase: `Phase 5 - Physics Constraints Complete`
+- Next intended phase: `Phase 6 - Food System`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -22,6 +23,47 @@ Key design constraints still in effect:
 - keep neural-net logic isolated
 - avoid jumping ahead into future-phase mechanics except for small hooks
 - favor readable, stable behavior over overcomplicated realism
+
+## Workflow / Tooling State
+
+Healthy shared CLI stack:
+- `git`
+- `node`
+- `npm`
+- `gh`
+- `rg`
+- `fd`
+- `jq`
+- `bat`
+
+Important workflow additions now in the repo:
+- [WORKFLOW.md](/d:/dev/ANTZ/WORKFLOW.md)
+- [.editorconfig](/d:/dev/ANTZ/.editorconfig)
+- [.gitattributes](/d:/dev/ANTZ/.gitattributes)
+- [.gitignore](/d:/dev/ANTZ/.gitignore)
+- [.gitmessage](/d:/dev/ANTZ/.gitmessage)
+- [.vscode/launch.json](/d:/dev/ANTZ/.vscode/launch.json)
+- [.vscode/tasks.json](/d:/dev/ANTZ/.vscode/tasks.json)
+- [tooling/check-cli.js](/d:/dev/ANTZ/tooling/check-cli.js)
+- [tooling/gh-status.js](/d:/dev/ANTZ/tooling/gh-status.js)
+- [tooling/phase5-smoke.js](/d:/dev/ANTZ/tooling/phase5-smoke.js)
+- [cspell.json](/d:/dev/ANTZ/cspell.json)
+- [.cspell/antz-words.txt](/d:/dev/ANTZ/.cspell/antz-words.txt)
+
+Useful commands:
+
+```powershell
+npm run tools:check
+npm run gh:status
+npm run spellcheck
+npm run test:phase5
+```
+
+Current verification state:
+- `tools:check` passes for the required stack
+- `gh:status` works and GitHub auth is configured
+- repo spellcheck passes
+- Phase 5 smoke suite passes
 
 ## Current Codebase State
 
@@ -36,151 +78,79 @@ Important current files and modules:
 - `src/systems/BrainSystem.js`
 - `src/systems/MovementSystem.js`
 - `src/systems/AttachmentSystem.js`
+- `src/systems/PhysicsSystem.js`
 - `src/systems/MapSystem.js`
 - `src/render/WorldRenderer.js`
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`
 
-Phase 4 is already described in:
-- [PROJECT_STATUS.md](/d:/dev/ANTZ/PROJECT_STATUS.md)
-- [README.md](/d:/dev/ANTZ/README.md)
-- [ARCHITECTURE.md](/d:/dev/ANTZ/ARCHITECTURE.md)
-- [AGENTS.md](/d:/dev/ANTZ/AGENTS.md)
+## Phase 5 Summary
 
-## Tooling Audit From This Session
+Phase 5 is now functionally complete.
 
-We re-checked the local CLI environment from the repository root.
+Built during this phase:
+- dedicated `PhysicsSystem`
+- update order of `movement -> attachment -> physics`
+- per-ant grasp-leg state with up to 4 active legs
+- spring-damper structural behavior for ant-ant and ant-environment grasping
+- wall-first anchor priority in corners
+- attached ants stop self-walking but can ride supported ants
+- impact jolt, rebound, and link break behavior
+- support-floor clamping to stop underground tunneling
+- wall padding to stop visible wall penetration
+- flatter ant-top support profile with safer center and edge roll-off
+- tracked debug for active legs, break state, and impact state
 
-Observed tool state before changes:
-- `git` existed but was very old: `2.20.1.windows.1`
-- `gh` was installed only in a user-local folder and was not on PATH
-- `rg` was only available through the VS Code / Codex extension bundle
-- `node` was healthy and machine-wide
-- `npm` was healthy and user-global installs were going to `C:\Users\ten_t\AppData\Roaming\npm`
-- `choco` existed but was old enough to be a questionable standard path for future maintenance
+Automated verification completed:
+- `node --check` on modified Phase 5 files
+- headless `SimulationController` tick
+- `npm run test:phase5`
+- `npm run spellcheck`
 
-Observed paths of interest:
-- Git: `C:\Program Files\Git\cmd\git.exe`
-- GitHub CLI user-local install discovered at: `C:\Users\ten_t\AppData\Local\Programs\GitHub CLI\bin\gh.exe`
-- Editor-bundled ripgrep discovered at:
-  `c:\Users\ten_t\.vscode\extensions\openai.chatgpt-26.325.31654-win32-x64\bin\windows-x86_64\rg.exe`
-- npm global prefix:
-  `C:\Users\ten_t\AppData\Roaming\npm`
+Smoke-test results:
+- Corner Priority: passed
+- Simple Bridge: passed
+- Wall Sheet: passed
+- Impact Jolt: passed
+- Long Idle: passed
 
-## Tooling Changes Completed
+User-observed behavior confirmed in-browser:
+- rideable ants on moving supports
+- visible jolt reactions after impacts
+- free-stack collapse still functioning
+- underground grasp-roll bug fixed
 
-Completed successfully during this session:
-- upgraded `git` to `2.53.0.windows.2`
-- installed machine-wide GitHub CLI via `winget`
-- repaired `winget` and `rg` command resolution by prepending their working install directories to the user PATH
+## Notable Implementation Notes
 
-Post-change confirmations:
-- `git --version` reported: `git version 2.53.0.windows.2`
-- GitHub CLI executable exists at:
-  `C:\Program Files\GitHub CLI\gh.exe`
-- `winget --version` now reports:
-  `v1.28.220`
-- `rg --version` now reports:
-  `ripgrep 15.1.0`
+- The top surface of an ant is now treated more like a rounded-rectangle approximation than a pure precarious point.
+- The center region is intentionally safer for perched ants, while the edges still allow roll-off.
+- Wall collision/support behavior now includes padding similar in spirit to the ground anti-penetration fix.
+- Physics remain stylized for watchability rather than biologically accurate.
 
-Important note:
-- the original Windows app-alias / WinGet link launchers were not removed
-- the user PATH now prefers these working executable directories first:
-  `C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.28.220.0_x64__8wekyb3d8bbwe`
-  `C:\Program Files\WinGet\Packages\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe\ripgrep-15.1.0-x86_64-pc-windows-msvc`
-- after a future App Installer or ripgrep upgrade, those versioned paths may need to be refreshed again
+## Remaining Near-Term Work
 
-## Tooling Decisions
+Most likely next step:
+- start Phase 6 planning around food pickup, carry state, and return-to-queen behavior
 
-Recommended standard going forward:
-- use `winget` as the preferred package manager for core machine tools
-- keep `git`, `gh`, and `rg` as standard CLI installs, not editor-bundled dependencies
-- keep Node machine-wide in `C:\Program Files\nodejs`
-- allow npm global packages to remain user-scoped unless there is a specific reason to make them machine-wide
-- avoid building new workflow assumptions around old Chocolatey state
-
-Reasoning:
-- this reduces path confusion
-- this makes Codex terminal access more predictable
-- this avoids mixing editor-private tools with system tools
-- this gives both the user and Codex a more stable shared environment
-
-## Remaining Tooling Follow-Up
-
-Still recommended:
-- open a fresh terminal or restart VS Code once so normal interactive shells inherit the repaired user PATH
-- if `winget` or `rg` break again after a package update, refresh the user PATH entries to the new versioned install folders or reinstall through `winget`
-
-Verify with:
-
-```powershell
-rg --version
-where.exe rg
-gh --version
-winget --version
-where.exe gh
-where.exe winget
-```
-
-## What Was Not Changed
-
-- no simulation code was modified in this session
-- no gameplay systems were changed
-- no tuning values were changed
-- no project phase work was started
-- no spellcheck feature was implemented yet
-
-## Pending Conversation Threads
-
-Topics raised in the recent discussion that may be worth resuming:
-- add spellcheck support to the chat/interface workflow if possible
-- confirm final standard toolchain after restart
-- continue the ANTZ implementation from the currently documented next phase
-
-## Recommended Restart Checklist
-
-After restarting VS Code:
-
-1. Open a fresh terminal in `d:\dev\ANTZ`
-2. Verify:
-
-```powershell
-git --version
-gh --version
-rg --version
-```
-
-3. If `rg` is still missing, install it with one of the `winget` commands above
-4. If `gh` is still missing, check PATH and verify `C:\Program Files\GitHub CLI\gh.exe`
-5. Once tool verification is clean, resume project work by re-reading:
-   - [AGENTS.md](/d:/dev/ANTZ/AGENTS.md)
-   - [ARCHITECTURE.md](/d:/dev/ANTZ/ARCHITECTURE.md)
-   - [PROJECT_STATUS.md](/d:/dev/ANTZ/PROJECT_STATUS.md)
-
-## Recommended Next Project Step
-
-When tool verification is complete, resume with Phase 5 planning:
-- summarize the Phase 5 goal
-- list files expected to change
-- state assumptions
-- propose the minimal implementation plan
-- implement only the scoped physics-constraint phase work
+Possible Phase 5 follow-up polish if needed:
+- further tune the new flatter support profile
+- adjust wall padding if a new edge case appears
+- refine bounce / jolt feel after more live observation
 
 ## Session Close Summary
 
-This session mostly improved environment reliability rather than changing the game code.
-
 Built or completed:
-- toolchain audit
-- Git upgrade
-- machine-wide GitHub CLI install
-- restart-safe handoff documentation
+- local workflow/tooling modernization
+- repo spellcheck setup
+- Phase 5 physics constraints
+- Phase 5 polish for ground/wall/support-surface visuals
+- Phase 5 smoke-test harness and passing results
 
 Assumptions made:
-- `winget` should be the standard tool manager for core CLI tools on this machine
-- npm globals can remain user-scoped
-- the missing `gh` command in the current shell is most likely a session PATH refresh issue, not a failed install
+- stylized, fun structural motion is preferable to naturalistic insect realism
+- a rounded-rectangle-style ant support profile is a better gameplay surface than a fully circular one
+- the smoke suite should remain lightweight and regression-focused rather than exhaustive
 
 Remaining next:
-- verify the repaired PATH in a normal fresh terminal
-- then continue ANTZ Phase 5 work
+- begin Phase 6 planning
+- keep the Phase 5 smoke tests as regression coverage going forward

@@ -368,7 +368,7 @@ export class AttachmentSystem {
       }
 
       if (nearLeftSide || nearRightSide) {
-        const anchorX = nearLeftSide ? wall.x : wall.x + wall.width;
+        const anchorX = nearLeftSide ? wall.x - ANT_TUNING.wallSupportPadding : wall.x + wall.width + ANT_TUNING.wallSupportPadding;
         const baseY = clamp(ant.position.y - ANT_TUNING.wallAnchorOffsetY, wall.y + 4, wall.y + wall.height - 4);
         wallAnchors.push(
           this.#createEnvironmentLeg("wall", wall.id, anchorX, baseY - extraSpread, nearLeftSide ? -1 : 1, -0.4),
@@ -376,11 +376,11 @@ export class AttachmentSystem {
           this.#createEnvironmentLeg("wall", wall.id, anchorX, baseY + extraSpread, nearLeftSide ? -1 : 1, 0.4)
         );
       } else {
-        const baseX = clamp(ant.position.x, wall.x + 4, wall.x + wall.width - 4);
+        const baseX = clamp(ant.position.x, wall.x + ANT_TUNING.wallSupportPadding + 4, wall.x + wall.width - ANT_TUNING.wallSupportPadding - 4);
         wallAnchors.push(
-          this.#createEnvironmentLeg("wall", wall.id, baseX - extraSpread, wall.y + 2, -0.4, -1),
-          this.#createEnvironmentLeg("wall", wall.id, baseX, wall.y + 2, 0, -1),
-          this.#createEnvironmentLeg("wall", wall.id, baseX + extraSpread, wall.y + 2, 0.4, -1)
+          this.#createEnvironmentLeg("wall", wall.id, baseX - extraSpread, wall.y - ANT_TUNING.wallSupportPadding, -0.4, -1),
+          this.#createEnvironmentLeg("wall", wall.id, baseX, wall.y - ANT_TUNING.wallSupportPadding, 0, -1),
+          this.#createEnvironmentLeg("wall", wall.id, baseX + extraSpread, wall.y - ANT_TUNING.wallSupportPadding, 0.4, -1)
         );
       }
 
@@ -442,3 +442,8 @@ export class AttachmentSystem {
     return randomRange(this.random, ANT_TUNING.graspPollCooldownMin, ANT_TUNING.graspPollCooldownMax);
   }
 }
+
+
+
+
+

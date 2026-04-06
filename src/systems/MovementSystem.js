@@ -9,7 +9,11 @@ function getAntSupportTopY(ant) {
 }
 
 function getWalkableSupportLimit() {
-  return ANT_TUNING.supportHalfWidth;
+  return ANT_TUNING.supportTopFlatHalfWidth + ANT_TUNING.supportEdgeRollZone;
+}
+
+function getStableSupportHalfWidth() {
+  return ANT_TUNING.supportTopFlatHalfWidth;
 }
 
 function hasActiveLegs(ant) {
@@ -96,8 +100,8 @@ export class MovementSystem {
         return;
       }
 
-      const minX = wall.x - ANT_TUNING.supportHalfWidth;
-      const maxX = wall.x + wall.width + ANT_TUNING.supportHalfWidth;
+      const minX = wall.x - getWalkableSupportLimit();
+      const maxX = wall.x + wall.width + getWalkableSupportLimit();
       if (ant.position.x < minX || ant.position.x > maxX) {
         this.#startFall(ant, "intentional");
       }
@@ -147,8 +151,8 @@ export class MovementSystem {
         ant.movement.verticalState = "climbing";
         ant.movement.localSupportOffsetX = clamp(
           ant.position.x - climbTarget.position.x,
-          -ANT_TUNING.supportHalfWidth,
-          ANT_TUNING.supportHalfWidth
+          -getStableSupportHalfWidth(),
+          getStableSupportHalfWidth()
         );
       }
     }
@@ -221,8 +225,8 @@ export class MovementSystem {
     if (supportAnt) {
       ant.movement.localSupportOffsetX = clamp(
         ant.movement.localSupportOffsetX + xIntent * ANT_TUNING.maxSpeed * 0.35 * deltaTime,
-        -ANT_TUNING.supportHalfWidth,
-        ANT_TUNING.supportHalfWidth
+        -getStableSupportHalfWidth(),
+        getStableSupportHalfWidth()
       );
 
       ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
@@ -326,8 +330,8 @@ export class MovementSystem {
     ant.movement.supportId = supportAnt.id;
     ant.movement.localSupportOffsetX = clamp(
       ant.position.x - supportAnt.position.x,
-      -ANT_TUNING.supportHalfWidth,
-      ANT_TUNING.supportHalfWidth
+      -getStableSupportHalfWidth(),
+      getStableSupportHalfWidth()
     );
     ant.position.y = getAntSupportTopY(supportAnt);
     ant.movement.verticalState = "perched";

@@ -1,3 +1,5 @@
+# README.md
+
 # ANTZ
 
 ANTZ is a browser-first ant colony simulation prototype focused on readable emergent behavior, modular systems, and later evolutionary learning.
@@ -6,7 +8,7 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project has completed Phase 4:
+The project has completed Phase 5:
 - side-view ant presentation and modular PixiJS rendering
 - lower-left colony spawn area and climb-test wall/food layout
 - fixed world-clock local sensing with ray-driven wedge aggregation
@@ -15,12 +17,14 @@ The project has completed Phase 4:
 - ant-on-ant climbing and perching behavior
 - local grasp polling with threshold-based attachment negotiation
 - temporary grasp groups with thrill-based persistence and decay
-- intentional falls versus collapse falls
-- unstable free-stack collapse with diagonal scatter behavior
-- tracked-ant debug for sensor wedges, brain IO, support state, and fall totals
+- spring-damper grasp-leg physics with up to 4 active grasp legs per ant
+- ground / wall anchor priority with corner preference for walls
+- impact jolt, bounce, and break behavior for attached structures
+- support-floor and wall-padding polish to keep structures visually rational
+- tracked-ant debug for sensor wedges, brain IO, support state, grasp legs, and recent impact/break state
+- Phase 5 smoke coverage for corner priority, bridge stability, wall sheets, impact jolts, and long-idle boundedness
 
 Not implemented yet:
-- full structural spring-damper physics constraints
 - food pickup / carry-return loop
 - reward accounting for structural contribution
 - pheromone map simulation
@@ -60,6 +64,15 @@ http://localhost:8000
 
 For the shared debug and review workflow, see [WORKFLOW.md](/d:/dev/ANTZ/WORKFLOW.md).
 
+Useful repo checks:
+
+```powershell
+npm run tools:check
+npm run spellcheck
+npm run test:phase5
+npm run gh:status
+```
+
 ## Current Prototype Notes
 
 The current build intentionally avoids global map knowledge for the ants.
@@ -71,12 +84,14 @@ Ant perception is currently shaped around local-only inputs such as:
 - nondirectional local food scent scalar
 - nondirectional pheromone scalar
 
-Phase 4 extends that brain-driven behavior into early structure building:
+Phase 5 extends that brain-driven behavior into real structural motion:
 - ants may climb onto other ants and perch
 - perched ants may trigger local grasp polls
-- successful groups attach temporarily
-- thrill boosts help a fresh grasp persist, but must fully decay before a new boost can be earned again
-- unsupported motion can lead to intentional falls or collapse falls depending on support logic
+- successful groups attach and transition into soft spring-damper grasp physics
+- grasping ants can anchor to ground, walls, and neighboring ants
+- falling ants can jolt and rebound off structures
+- unsupported motion still distinguishes intentional falls from collapse falls
+- support surfaces now bias toward a flatter central perch with roll-off near the edges
 
 ## Project Structure
 
@@ -95,6 +110,7 @@ Key current files:
 - `src/systems/SimulationController.js`
 - `src/systems/MovementSystem.js`
 - `src/systems/AttachmentSystem.js`
+- `src/systems/PhysicsSystem.js`
 - `src/systems/MapSystem.js`
 - `src/systems/SensorSystem.js`
 - `src/render/WorldRenderer.js`

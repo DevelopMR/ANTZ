@@ -4,87 +4,98 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 4 - Grasp Intent Complete
+Phase 5 - Physics Constraints Complete
 
 ## Phase Goal
-Phase 4 turned `graspIntent` into real local structure behavior where ants:
-- use direct `xVel` and `yVel` neural movement outputs
-- climb onto other ants and perch on simple support surfaces
-- trigger local grasp polls from perched-on-ant situations
-- form temporary attached groups when combined grasp desire passes threshold
-- gain a small temporary thrill bonus that helps them stay connected before it decays
-- must fully lose that thrill bonus before earning a fresh boost again
-- distinguish intentional falls from collapse falls
-- enforce unstable free-stack collapse while preserving simple walkable support behavior
-
-This phase introduced attachment negotiation, first-pass gravity/falling behavior, unstable stack collapse rules, and readable debug instrumentation, but not full structural physics yet.
+Phase 5 turns temporary grasp groups into lightweight structural systems with fun, readable spring-damper behavior. The goal is not biological realism, but game-realistic motion that is stable, dramatic, and easy to watch:
+- grounded and wall-supported ants can anchor structures
+- grasping ants can hold up to 4 legs from a thorax-centered grasp node
+- grasping ants stop self-walking, but can still ride supported motion
+- attached groups sway, stretch, bounce, and fail under load
+- collapse and impact events visibly jolt nearby structures
+- support surfaces stay visually rational instead of letting ants sink into the ground or walls
 
 ## What Was Built
-- neural outputs updated to `xVel`, `yVel`, `graspIntent`, and `interaction`
-- ants can climb onto grounded, wall-supported, or otherwise walkable ant backs
-- perched ants can trigger random local grasp polls with nearby neighbors
-- grasp success uses summed effective grasp desire against a threshold
-- hard low-desire ants block a grasp attempt
-- successful participants become attached and use the `grasping` visual
-- thrill boost is applied on successful grasp and decays over time
-- thrill boost cannot be refreshed until it fully decays
-- intentional falls go straight down to the nearest walkable surface
-- collapse falls scatter diagonally and land on ground only
-- free-moving stacks of three or more collapse, leaving the bottom ant in place
-- grasped platforms can support up to two free ants above them before collapse begins
-- additional food nodes were added on wall tops for climb testing
-- tracked debug display now reports support state, brain IO, wedge census, and cumulative fallen-ant totals
+- added a dedicated `PhysicsSystem` and explicit `movement -> attachment -> physics` update order
+- replaced rigid temporary grasp behavior with soft spring-damper leg constraints
+- added up to 4 active grasp legs per ant with per-leg debug state
+- grounded and wall-supported ants now prioritize an environmental first grasp leg
+- corner cases prefer wall anchors before ground anchors
+- grasping ants no longer self-walk while attached, but can ride supported ants
+- attached groups now show sway, stretch, rebound, and dramatic break behavior
+- falling ants transfer jolt and bounce into structures on impact
+- post-physics support-floor clamping prevents attached ants from slipping underground
+- wall-support padding prevents visibly embedded ants inside wall faces
+- ant-top support was flattened into a rounded-rectangle-style approximation with a safer center and edge roll-off
+- tracked-ant debug now shows active grasp-leg labels and recent break / impact state
+- Phase 5 smoke tests were added to the repo as `npm run test:phase5`
+
+## Verification
+Automated checks currently passing:
+- `node --check` on Phase 5-modified systems
+- headless `SimulationController` single-tick instantiation
+- `npm run test:phase5`
+- `npm run spellcheck`
+
+Current smoke-test results:
+- Corner Priority: passed
+- Simple Bridge: passed
+- Wall Sheet: passed
+- Impact Jolt: passed
+- Long Idle: passed
+
+Observed in-browser behavior confirmed during this phase:
+- standing ants can ride on walking ants
+- grasped structures visibly jolt when impacted
+- free stacks still collapse outside the grasp-physics path
+- grounded grasped ants no longer tunnel beneath the terrain
 
 ## Explicit Non-Goals (Still Not Implemented)
-- full spring-damper structural constraints
-- eat / drop interaction logic
+- food pickup / carry-return interaction logic
 - structural reward accounting
-- advanced overhead grasp rescue / arch support cases
-- visual sensing differences between grasping and walking ants
+- connection-tree contribution resolution
+- pheromone map simulation
+- queen reproduction / progression systems
+- death / recycling systems
 
 ## Current Systems Expected
 At minimum:
-- Ant entity/class with support state, fall state, and attachment state
+- Ant entity/class with support, fall, attachment, and grasp-leg state
 - NeuralNet feedforward module
 - BrainSystem input assembly and inference step
-- MovementSystem consuming direct directional intent with climb, support, intentional fall, and collapse handling
-- AttachmentSystem handling local polling, threshold success, thrill persistence, and decay
-- Rendering layer with tracked-ant sensor and brain debug
+- MovementSystem for locomotion, climbing, falling, and free-stack collapse
+- AttachmentSystem for poll-based grasp negotiation and anchor assignment
+- PhysicsSystem for spring-damper leg solving, bounce, and break behavior
+- Rendering layer with tracked-ant support / leg / break / impact debug
 
 ## Known Constraints
 - Browser-first (no backend)
 - JavaScript (no TypeScript required)
 - PixiJS-based rendering
-- current attachments are simple temporary local groups, not full structural constraints
-- support classification is still local and lightweight, not a full structural solver
-- collapse lands on ground only for now to keep code and gameplay simple
+- physics remain lightweight and local rather than full rigid-body simulation
+- support logic is intentionally stylized toward fun motion and readable structures
+- ant support surfaces are approximated rather than anatomically precise
 
 ## Environment Status
-- current session focused on toolchain cleanup rather than simulation changes
-- no game code was modified during the tooling session
-- `git` was upgraded and now reports `2.53.0.windows.2`
-- machine-wide GitHub CLI was installed at `C:\Program Files\GitHub CLI\gh.exe`
-- `gh` now resolves on PATH
-- `winget` and `rg` were repaired by prepending their working install directories to the user PATH
-- `rg` now resolves as a standard CLI instead of relying on the editor-bundled copy
-- preferred package-manager standard going forward is `winget` for core machine tools
+- core workflow toolchain is healthy: `git`, `node`, `npm`, `gh`, `rg`, `fd`, `jq`, `bat`
+- repo spellcheck is configured and passing
+- GitHub CLI auth is configured for regular GitHub-based workflow
+- shared workflow scripts exist for tool checking, GitHub status, spellcheck, and Phase 5 smoke tests
 
 ## Next Phase
-Phase 5 - Physics Constraints
+Phase 6 - Food System
 
 Primary focus for the next phase:
-- replace the simple local support model with more explicit structural constraint behavior
-- make grasped groups behave more like cohesive platforms and sheets
-- improve stability handling, load transfer, and failure behavior
-- preserve readable, believable motion without jumping ahead to later food/reward systems
+- introduce food pickup and local food interaction behavior
+- make successful structural access to food matter mechanically
+- support return-to-queen flow once food is acquired
+- preserve the current readable structure-building loop while adding purpose to reaching targets
 
 ## Immediate Next Actions
-1. Open a fresh terminal and verify:
-   `git --version`, `gh --version`, `rg --version`
-2. Also verify:
-   `winget --version`
-3. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting Phase 5 work
-4. Resume with a Phase 5 plan only after tool verification is clean
+1. Keep tuning Phase 5 feel if new visual edge cases show up
+2. Preserve the Phase 5 smoke suite as a regression check
+3. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting Phase 6 work
+4. Begin Phase 6 planning around food pickup, carry state, and return behavior
 
 ## Related Handoff Note
-- see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the full restart-safe tooling and session handoff
+- see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + session handoff context

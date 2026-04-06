@@ -123,6 +123,7 @@ export class PhysicsSystem {
 
     this.#resolveFallingImpacts(ants);
     this.#enforceSupportFloors(ants, antById, mapSystem);
+    this.#enforceWallExclusion(ants, mapSystem);
 
     for (const ant of ants) {
       refreshAttachedState(ant);
@@ -373,4 +374,33 @@ export class PhysicsSystem {
       }
     }
   }
+  #enforceWallExclusion(ants, mapSystem) {
+    for (const ant of ants) {
+      if (ant.movement.verticalState === "falling") {
+        continue;
+      }
+
+      for (const wall of mapSystem.walls) {
+        const minX = wall.x - ANT_TUNING.collisionRadius - ANT_TUNING.wallSupportPadding;
+        const maxX = wall.x + wall.width + ANT_TUNING.collisionRadius + ANT_TUNING.wallSupportPadding;
+        const minY = wall.y - ANT_TUNING.supportHeight + ANT_TUNING.supportSnapDistance;
+        const maxY = wall.y + wall.height + ANT_TUNING.collisionRadius;
+
+        if (ant.position.x < minX || ant.position.x > maxX || ant.position.y < minY || ant.position.y > maxY) {
+          continue;
+        }
+
+        const distanceToLeft = Math.abs(ant.position.x - minX);
+        const distanceToRight = Math.abs(maxX - ant.position.x);
+
+        ant.position.x = distanceToLeft < distanceToRight ? minX : maxX;
+        ant.velocity.x *= 0.2;
+      }
+    }
+  }
 }
+
+
+
+
+

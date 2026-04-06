@@ -410,8 +410,8 @@ export class MapSystem {
         continue;
       }
 
-      const minX = wall.x - ANT_TUNING.collisionRadius;
-      const maxX = wall.x + wall.width + ANT_TUNING.collisionRadius;
+      const minX = wall.x - ANT_TUNING.collisionRadius - ANT_TUNING.wallSupportPadding;
+      const maxX = wall.x + wall.width + ANT_TUNING.collisionRadius + ANT_TUNING.wallSupportPadding;
       const entersWall = resolvedX >= minX && resolvedX <= maxX;
       const crossesWall = segmentCrossesBand(currentX, resolvedX, minX, maxX);
 
@@ -434,8 +434,8 @@ export class MapSystem {
     let bestSurface = groundSurface.y >= currentY ? groundSurface : null;
 
     for (const wall of this.walls) {
-      const minX = wall.x - ANT_TUNING.supportHalfWidth;
-      const maxX = wall.x + wall.width + ANT_TUNING.supportHalfWidth;
+      const minX = wall.x - ANT_TUNING.supportTopFlatHalfWidth;
+      const maxX = wall.x + wall.width + ANT_TUNING.supportTopFlatHalfWidth;
       if (x < minX || x > maxX) {
         continue;
       }
@@ -452,8 +452,8 @@ export class MapSystem {
           y: topY,
           x: clamp(
             x,
-            wall.x + ANT_TUNING.supportHalfWidth * 0.25,
-            wall.x + wall.width - ANT_TUNING.supportHalfWidth * 0.25
+            wall.x + ANT_TUNING.wallSupportPadding + ANT_TUNING.supportTopFlatHalfWidth * 0.25,
+            wall.x + wall.width - ANT_TUNING.wallSupportPadding - ANT_TUNING.supportTopFlatHalfWidth * 0.25
           ),
         };
       }
@@ -468,8 +468,8 @@ export class MapSystem {
         continue;
       }
 
-      const minX = ant.position.x - ANT_TUNING.supportHalfWidth;
-      const maxX = ant.position.x + ANT_TUNING.supportHalfWidth;
+      const minX = ant.position.x - ANT_TUNING.supportTopFlatHalfWidth;
+      const maxX = ant.position.x + ANT_TUNING.supportTopFlatHalfWidth;
       if (x < minX || x > maxX) {
         continue;
       }
@@ -486,8 +486,8 @@ export class MapSystem {
           y: topY,
           x: clamp(
             x,
-            ant.position.x - ANT_TUNING.supportHalfWidth,
-            ant.position.x + ANT_TUNING.supportHalfWidth
+            ant.position.x - ANT_TUNING.supportTopFlatHalfWidth,
+            ant.position.x + ANT_TUNING.supportTopFlatHalfWidth
           ),
         };
       }
@@ -496,9 +496,3 @@ export class MapSystem {
     return bestSurface ?? groundSurface;
   }
 }
-
-
-
-
-
-
