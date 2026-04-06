@@ -6,27 +6,25 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project has completed Phase 3:
-- side-view ant presentation
-- lower-left colony spawn area
-- ground-bound ant movement prototype
-- multiple ant visual states
-- PixiJS rendering with a sprite-atlas ant pipeline
-- side-view obstacle map with walls, pegs, ground, queen, and early food nodes
-- ray-driven local sensing aggregated into 6 fixed world-clock wedges
-- per-ant feedforward neural nets with configurable hidden layers
-- explicit brain input assembly from wedge proximity, wedge danger-color, food scent, and pheromone
-- neural control of turn and forward motion
-- stored `graspIntent` and `interaction` outputs ready for later phases
-- tracked-ant debug visualization for both sensor data and brain IO
-- improved wall collision handling and clamped wedge-debug labels for readability
+The project has completed Phase 4:
+- side-view ant presentation and modular PixiJS rendering
+- lower-left colony spawn area and climb-test wall/food layout
+- fixed world-clock local sensing with ray-driven wedge aggregation
+- per-ant feedforward neural nets with explicit sensor-to-brain wiring
+- direct neural movement outputs: `xVel`, `yVel`, `graspIntent`, `interaction`
+- ant-on-ant climbing and perching behavior
+- local grasp polling with threshold-based attachment negotiation
+- temporary grasp groups with thrill-based persistence and decay
+- intentional falls versus collapse falls
+- unstable free-stack collapse with diagonal scatter behavior
+- tracked-ant debug for sensor wedges, brain IO, support state, and fall totals
 
 Not implemented yet:
-- attachment mechanics
-- structural physics and climbing behavior
+- full structural spring-damper physics constraints
 - food pickup / carry-return loop
-- rewards / reproduction
+- reward accounting for structural contribution
 - pheromone map simulation
+- queen progression / reproduction
 - death / recycling
 
 ## Goals
@@ -71,13 +69,12 @@ Ant perception is currently shaped around local-only inputs such as:
 - nondirectional local food scent scalar
 - nondirectional pheromone scalar
 
-Phase 3 wires those sensor values into a feedforward brain with 4 outputs:
-- `turn`
-- `forward`
-- `graspIntent`
-- `interaction`
-
-Only `turn` and `forward` affect movement right now. `graspIntent` and `interaction` are stored as inert runtime intents for the next phase.
+Phase 4 extends that brain-driven behavior into early structure building:
+- ants may climb onto other ants and perch
+- perched ants may trigger local grasp polls
+- successful groups attach temporarily
+- thrill boosts help a fresh grasp persist, but must fully decay before a new boost can be earned again
+- unsupported motion can lead to intentional falls or collapse falls depending on support logic
 
 ## Project Structure
 
@@ -95,6 +92,7 @@ Key current files:
 - `src/systems/BrainSystem.js`
 - `src/systems/SimulationController.js`
 - `src/systems/MovementSystem.js`
+- `src/systems/AttachmentSystem.js`
 - `src/systems/MapSystem.js`
 - `src/systems/SensorSystem.js`
 - `src/render/WorldRenderer.js`
