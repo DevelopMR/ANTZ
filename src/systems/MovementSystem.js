@@ -8,8 +8,8 @@ function getAntSupportTopY(ant) {
   return ant.position.y - ANT_TUNING.supportHeight;
 }
 
-function getSupportCoverageLimit() {
-  return ANT_TUNING.supportHalfWidth * 2 * (1 - ANT_TUNING.graspCoverageRatio);
+function getWalkableSupportLimit() {
+  return ANT_TUNING.supportHalfWidth;
 }
 
 export class MovementSystem {
@@ -129,7 +129,6 @@ export class MovementSystem {
       ? antById.get(ant.movement.supportId)
       : null;
     const wantsClimb = yIntent <= -ANT_TUNING.climbIntentThreshold;
-    const wantsDescend = yIntent >= ANT_TUNING.climbIntentThreshold;
 
     if (!attachedLock && !supportAnt && wantsClimb) {
       const climbTarget = this.#findClimbTarget(ant, ants);
@@ -143,8 +142,6 @@ export class MovementSystem {
           ANT_TUNING.supportHalfWidth
         );
       }
-    } else if (!attachedLock && supportAnt && wantsDescend) {
-      this.#startFall(ant, "intentional");
     }
 
     this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, postureSpeedScale, attachedLock);
@@ -356,7 +353,7 @@ export class MovementSystem {
     const childrenBySupportId = new Map();
 
     for (const ant of ants) {
-      if (ant.movement.supportType !== "ant" || ant.movement.verticalState === "falling") {
+      if (ant.movement.supportType !== "ant" || ant.movement.verticalState !== "perched") {
         continue;
       }
 
@@ -369,7 +366,7 @@ export class MovementSystem {
     const collapseIds = new Set();
 
     for (const ant of ants) {
-      if (ant.movement.supportType !== "ant") {
+      if (ant.movement.supportType !== "ant" || ant.movement.verticalState !== "perched") {
         continue;
       }
 
@@ -383,6 +380,10 @@ export class MovementSystem {
       while (current.movement.supportType === "ant") {
         const supportAnt = antById.get(current.movement.supportId);
         if (!supportAnt) {
+          break;
+        }
+
+        if (supportAnt.movement.supportType === "ant" && supportAnt.movement.verticalState !== "perched") {
           break;
         }
 
@@ -439,7 +440,7 @@ export class MovementSystem {
   }
 
   #hasWalkableOverlap(upperAnt, lowerAnt) {
-    return Math.abs(upperAnt.position.x - lowerAnt.position.x) <= getSupportCoverageLimit();
+    return Math.abs(upperAnt.position.x - lowerAnt.position.x) <= getWalkableSupportLimit();
   }
 
   #moveTowardsY(currentY, targetY, deltaTime) {
@@ -509,3 +510,7 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
+
+
+
+
