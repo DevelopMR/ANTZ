@@ -24,5 +24,6 @@
     "pheromone",
     "xVel",
     "yVel"
-  ]
+  ],
+  "chatgpt.followUpQueueMode": "steer"
 }
