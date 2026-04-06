@@ -342,7 +342,14 @@ export class WorldRenderer {
   }
 
   #drawSensorDebug() {
-    const ant = this.simulation.ants[SENSOR_TUNING.debugAntIndex];
+    const carryingAnt = this.simulation.ants.find((candidate) => candidate.carryingFood || candidate.food?.carrying);
+    const focusedAnt = this.simulation.debugFocusAntId != null
+      ? this.simulation.ants.find((candidate) => candidate.id === this.simulation.debugFocusAntId)
+      : null;
+    const fallbackIndex = this.simulation.ants.length > 0
+      ? Math.floor(this.simulation.elapsedTime * 0.7) % this.simulation.ants.length
+      : SENSOR_TUNING.debugAntIndex;
+    const ant = carryingAnt ?? focusedAnt ?? this.simulation.ants[fallbackIndex] ?? this.simulation.ants[SENSOR_TUNING.debugAntIndex];
     if (!ant || !ant.sensorState?.rays || !ant.sensorState?.wedges) {
       this.sensorOverlay.clear();
       for (const label of this.sensorLabelTexts) {
@@ -502,6 +509,7 @@ export class WorldRenderer {
     }
   }
 }
+
 
 
 
