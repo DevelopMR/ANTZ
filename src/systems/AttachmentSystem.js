@@ -180,11 +180,13 @@ export class AttachmentSystem {
     for (const ant of ordered) {
       ant.attached = ant.connectionIds.length > 0;
       ant.attachment.groupId = ant.attached ? groupId : null;
-      ant.attachment.thrillBoost = clamp(
-        ant.attachment.thrillBoost + randomRange(this.random, ANT_TUNING.graspThrillBoostMin, ANT_TUNING.graspThrillBoostMax),
-        0,
-        1
-      );
+      if (ant.attachment.thrillBoost <= 0) {
+        ant.attachment.thrillBoost = clamp(
+          randomRange(this.random, ANT_TUNING.graspThrillBoostMin, ANT_TUNING.graspThrillBoostMax),
+          0,
+          1
+        );
+      }
       ant.attachment.pollCooldown = this.#randomPollCooldown();
       if (ant.movement.supportType === "ground") {
         ant.velocity.x = 0;
@@ -215,5 +217,6 @@ export class AttachmentSystem {
     return randomRange(this.random, ANT_TUNING.graspPollCooldownMin, ANT_TUNING.graspPollCooldownMax);
   }
 }
+
 
 
