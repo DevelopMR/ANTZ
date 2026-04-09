@@ -1,4 +1,4 @@
-import { FOOD_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
+import { ANT_TUNING, FOOD_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -6,6 +6,12 @@ function clamp(value, min, max) {
 
 function countActiveLegs(ant) {
   return ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
+}
+function getFoodPickupProbePosition(ant) {
+  return {
+    x: ant.position.x,
+    y: ant.position.y - ANT_TUNING.supportHeight * 0.4,
+  };
 }
 
 function clonePayload(payload) {
@@ -69,10 +75,6 @@ export class FoodSystem {
       return;
     }
 
-    if (ant.attached || countActiveLegs(ant) > 0) {
-      return;
-    }
-
     if (ant.movement.verticalState === "falling") {
       return;
     }
@@ -81,7 +83,8 @@ export class FoodSystem {
       return;
     }
 
-    const foodNode = mapSystem.findFullyContainedFoodNode(ant.position, FOOD_TUNING.pickupInset);
+    const pickupProbe = getFoodPickupProbePosition(ant);
+    const foodNode = mapSystem.findFullyContainedFoodNode(pickupProbe, FOOD_TUNING.pickupInset);
     if (!foodNode) {
       return;
     }
@@ -93,6 +96,10 @@ export class FoodSystem {
 
     const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
     const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath);
+
+    if (ant.attached || countActiveLegs(ant) > 0) {
+      simulationController.attachmentSystem.releaseAntForFoodCarry(ant, ants);
+    }
 
     ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
     ant.food.carrying = true;
@@ -164,3 +171,6 @@ export class FoodSystem {
     return FOOD_TUNING.spawnOnFeedMin + Math.floor(this.random() * span);
   }
 }
+
+
+

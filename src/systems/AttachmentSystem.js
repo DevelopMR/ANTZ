@@ -125,6 +125,33 @@ export class AttachmentSystem {
     this.nextGroupId = 1;
   }
 
+  releaseAntForFoodCarry(ant, ants, reason = "food-carry") {
+    const antById = new Map(ants.map((candidate) => [candidate.id, candidate]));
+    const connectedIds = [...ant.connectionIds];
+
+    for (const otherId of connectedIds) {
+      const otherAnt = antById.get(otherId);
+      if (!otherAnt) {
+        continue;
+      }
+
+      removeConnection(otherAnt, ant.id);
+      removeLegsTargetingAnt(otherAnt, ant.id);
+      refreshAttachedState(otherAnt);
+      otherAnt.physics.lastBreakReason = reason;
+
+      if (!otherAnt.attached) {
+        settleOrFall(otherAnt);
+      }
+    }
+
+    ant.connectionIds.length = 0;
+    clearAllLegs(ant);
+    refreshAttachedState(ant);
+    ant.attachment.pollCooldown = this.#randomPollCooldown();
+    ant.physics.lastBreakReason = reason;
+  }
+
   update(ants, deltaTime, mapSystem) {
     const antById = new Map(ants.map((ant) => [ant.id, ant]));
 
@@ -442,6 +469,8 @@ export class AttachmentSystem {
     return randomRange(this.random, ANT_TUNING.graspPollCooldownMin, ANT_TUNING.graspPollCooldownMax);
   }
 }
+
+
 
 
 
