@@ -129,8 +129,14 @@ export class FoodScentSystem {
           }
 
           const normalizedDistance = distance / radius;
-          const falloff = Math.max(0, 1 - normalizedDistance * normalizedDistance);
-          const emission = FOOD_SCENT_TUNING.emissionStrength * strengthScale * falloff * deltaTime;
+          const coreRatio = FOOD_SCENT_TUNING.coreRadiusRatio;
+          const falloff = normalizedDistance <= coreRatio
+            ? 1 - (1 - FOOD_SCENT_TUNING.coreEdgeIntensity) * (normalizedDistance / coreRatio)
+            : FOOD_SCENT_TUNING.coreEdgeIntensity * Math.pow(
+              1 - (normalizedDistance - coreRatio) / (1 - coreRatio),
+              2
+            );
+          const emission = FOOD_SCENT_TUNING.emissionStrength * strengthScale * Math.max(0, falloff) * deltaTime;
           const index = this.#index(column, row);
           this.field[index] = clamp(this.field[index] + emission, 0, FOOD_SCENT_TUNING.sampleClamp);
         }
@@ -156,5 +162,6 @@ export class FoodScentSystem {
     return top * (1 - ty) + bottom * ty;
   }
 }
+
 
 
