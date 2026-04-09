@@ -156,7 +156,7 @@ export class MovementSystem {
     }
 
     if (isCarryingFood(ant)) {
-      this.#integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById);
+      this.#integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById, ants);
       return;
     }
 
@@ -192,28 +192,20 @@ export class MovementSystem {
     this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
   }
 
-  #integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById) {
+  #integrateCarryReturnMotion(ant, deltaTime, mapSystem, supportAnt, antById, ants) {
     const targetX = ant.food.deliveryTargetX || ant.position.x;
     const deltaX = targetX - ant.position.x;
-    let xIntent = clamp(deltaX / 32, -1, 1);
+    const xIntent = clamp(deltaX / 32, -1, 1);
     const carrySpeedScale = FOOD_TUNING.carrySpeedScale;
 
-    // Carriers prefer to get back to static support before making the full delivery run.
-    // On an ant back, bias toward the queen-side edge so they step off and drop to ground.
-    if (ant.movement.supportType === "ant" && supportAnt) {
-      const edgeDirection = deltaX <= 0 ? -1 : 1;
-      xIntent = edgeDirection;
-    }
-
     ant.movement.desiredDirection = xIntent;
-    this.#applyHorizontalMotion(ant, deltaTime, mapSystem, supportAnt, xIntent, carrySpeedScale);
-    this.#updateSupportState(ant, antById, mapSystem);
+    this.#applyHorizontalMotion(ant, deltaTime, mapSystem, null, xIntent, carrySpeedScale);
 
     if (ant.movement.verticalState === "falling") {
       return;
     }
 
-    this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
+    this.#resolveCarrySupport(ant, deltaTime, mapSystem, ants, antById);
 
     if (Math.abs(deltaX) <= FOOD_TUNING.queenDeliveryRadius * 0.8) {
       ant.velocity.x *= 0.72;
@@ -310,6 +302,48 @@ export class MovementSystem {
       ant.position.y = targetY;
       ant.movement.verticalState = "grounded";
     }
+  }
+
+  #resolveCarrySupport(ant, deltaTime, mapSystem, ants, antById) {
+    const supportCandidates = ants.filter((candidate) => candidate.id !== ant.id);
+    const landingSurface = mapSystem.findLandingSurface(ant.position.x, ant.position.y - ANT_TUNING.supportSnapDistance, supportCandidates);
+
+    if (!landingSurface) {
+      ant.movement.supportType = "none";
+      ant.movement.supportId = null;
+      ant.movement.localSupportOffsetX = 0;
+      this.#startFall(ant, "intentional");
+      return;
+    }
+
+    ant.position.x = landingSurface.x;
+    ant.position.y = this.#moveTowardsY(ant.position.y, landingSurface.y, deltaTime);
+    ant.velocity.y = 0;
+
+    if (landingSurface.type === "ground") {
+      ant.movement.supportType = "ground";
+      ant.movement.supportId = null;
+      ant.movement.localSupportOffsetX = 0;
+      ant.movement.groundY = landingSurface.y;
+      ant.movement.verticalState = "grounded";
+      return;
+    }
+
+    if (landingSurface.type === "wall") {
+      ant.movement.supportType = "wall";
+      ant.movement.supportId = landingSurface.id;
+      ant.movement.localSupportOffsetX = 0;
+      ant.movement.verticalState = "grounded";
+      return;
+    }
+
+    const supportAnt = antById.get(landingSurface.id);
+    ant.movement.supportType = supportAnt ? "ant" : "none";
+    ant.movement.supportId = supportAnt?.id ?? null;
+    ant.movement.localSupportOffsetX = supportAnt
+      ? clamp(ant.position.x - supportAnt.position.x, -getWalkableSupportLimit(), getWalkableSupportLimit())
+      : 0;
+    ant.movement.verticalState = "perched";
   }
 
   #integrateFall(ant, deltaTime, mapSystem, ants, antById) {
@@ -613,4 +647,5 @@ export class MovementSystem {
     return min + (max - min) * this.random();
   }
 }
+
 

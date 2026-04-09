@@ -39,7 +39,7 @@ export class FoodSystem {
         continue;
       }
 
-      this.#attemptFoodPickup(ant, mapSystem, queen);
+      this.#attemptFoodPickup(ant, mapSystem, queen, simulationController);
     }
   }
 
@@ -137,4 +137,6 @@ export class FoodSystem {
     return FOOD_TUNING.spawnOnFeedMin + Math.floor(this.random() * span);
   }
 }
+
+
 
