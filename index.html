@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ant Sim - Phase 1</title>
+  <title>Ant Sim - Phase 7</title>
   <style>
     :root {
       color-scheme: dark;
@@ -12,6 +12,10 @@
       --hud-bg: rgba(32, 24, 12, 0.82);
       --hud-text: #f4ead3;
       --accent-soft: #ffd6a1;
+      --toggle-bg: rgba(18, 40, 24, 0.82);
+      --toggle-border: rgba(196, 236, 180, 0.3);
+      --toggle-text: #eef7df;
+      --toggle-active: #7dbb56;
     }
 
     * {
@@ -54,6 +58,44 @@
     .hud__accent {
       color: var(--accent-soft);
     }
+
+    .toggle-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .toggle-button {
+      padding: 10px 14px;
+      border: 1px solid var(--toggle-border);
+      border-radius: 12px;
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      font: inherit;
+      cursor: pointer;
+      transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
+    }
+
+    .toggle-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .toggle-button.is-active {
+      background: rgba(41, 76, 36, 0.9);
+      border-color: rgba(171, 221, 120, 0.55);
+      color: #f3ffe8;
+      box-shadow: 0 0 0 1px rgba(125, 187, 86, 0.18) inset;
+    }
+
+    .toggle-button__hint {
+      display: block;
+      font-size: 11px;
+      opacity: 0.78;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 
@@ -61,7 +103,13 @@
   <div id="app"></div>
   <div class="hud">
     <strong>Ant Sim</strong>
-    <div class="hud__accent">Phase 6 Food System</div>
+    <div class="hud__accent">Phase 7 Food Scent Map</div>
+  </div>
+  <div class="toggle-panel">
+    <button id="toggle-food-scent" class="toggle-button" type="button" aria-pressed="false">
+      Food Scent Map
+      <span class="toggle-button__hint">Toggle overlay</span>
+    </button>
   </div>
   <script type="module" src="./src/main.js"></script>
 </body>

@@ -4,6 +4,7 @@ import { BrainSystem } from "./BrainSystem.js";
 import { AttachmentSystem } from "./AttachmentSystem.js";
 import { PhysicsSystem } from "./PhysicsSystem.js";
 import { FoodSystem } from "./FoodSystem.js";
+import { FoodScentSystem } from "./FoodScentSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
 import { ANT_TUNING, FOOD_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
@@ -23,17 +24,20 @@ export class SimulationController {
     this.attachmentSystem = new AttachmentSystem(random);
     this.physicsSystem = new PhysicsSystem(random);
     this.foodSystem = new FoodSystem(random);
+    this.foodScentSystem = new FoodScentSystem();
     this.accumulator = 0;
     this.elapsedTime = 0;
     this.ants = [];
     this.nextAntId = 0;
+    this.debugFocusAntId = null;
     this.queen = new Queen(SIMULATION_TUNING.queenPosition);
     this.goal = {
       position: { ...SIMULATION_TUNING.exitPosition },
     };
 
     this.#spawnInitialAnts();
-    this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
+    this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
+    this.sensorSystem.update(this.ants, this.mapSystem, this.queen, this.foodScentSystem);
     this.brainSystem.update(this.ants);
   }
 
@@ -43,12 +47,15 @@ export class SimulationController {
     this.elapsedTime += safeDelta;
 
     while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
-      this.sensorSystem.update(this.ants, this.mapSystem, this.queen);
+      this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
+      this.sensorSystem.update(this.ants, this.mapSystem, this.queen, this.foodScentSystem);
       this.brainSystem.update(this.ants);
       this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.attachmentSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.physicsSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.foodSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
+      const carryingAnt = this.ants.find((ant) => ant.carryingFood || ant.food?.carrying);
+      this.debugFocusAntId = carryingAnt?.id ?? null;
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
     }
   }
@@ -61,6 +68,10 @@ export class SimulationController {
       }, genomeSource);
       this.ants.push(ant);
     }
+  }
+
+  setFoodScentOverlayEnabled(enabled) {
+    this.foodScentSystem.setOverlayEnabled(enabled);
   }
 
   #spawnInitialAnts() {
@@ -110,6 +121,3 @@ export class SimulationController {
     return ant;
   }
 }
-
-
-

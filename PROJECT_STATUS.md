@@ -4,77 +4,74 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 5 - Physics Constraints Complete
+Phase 6 - Food System Complete
 
 ## Phase Goal
-Phase 5 turns temporary grasp groups into lightweight structural systems with fun, readable spring-damper behavior. The goal is not biological realism, but game-realistic motion that is stable, dramatic, and easy to watch:
-- grounded and wall-supported ants can anchor structures
-- grasping ants can hold up to 4 legs from a thorax-centered grasp node
-- grasping ants stop self-walking, but can still ride supported motion
-- attached groups sway, stretch, bounce, and fail under load
-- collapse and impact events visibly jolt nearby structures
-- support surfaces stay visually rational instead of letting ants sink into the ground or walls
+Phase 6 made food mechanically meaningful without jumping ahead into full evolution. The completed food loop now lets ants:
+- visually detect food as green circles through the existing wedge system
+- interact only when fully inside the food pickup zone
+- consume a meal portion on pickup
+- carry food in an automatic return-to-queen mode
+- drop food at the queen's right side, salute, and return to free-ant behavior
+- trigger immediate queen-fed spawning
+- lose carried food if they fall during the return trip
 
 ## What Was Built
-- added a dedicated `PhysicsSystem` and explicit `movement -> attachment -> physics` update order
-- replaced rigid temporary grasp behavior with soft spring-damper leg constraints
-- added up to 4 active grasp legs per ant with per-leg debug state
-- grounded and wall-supported ants now prioritize an environmental first grasp leg
-- corner cases prefer wall anchors before ground anchors
-- grasping ants no longer self-walk while attached, but can ride supported ants
-- attached groups now show sway, stretch, rebound, and dramatic break behavior
-- falling ants transfer jolt and bounce into structures on impact
-- post-physics support-floor clamping prevents attached ants from slipping underground
-- wall-support padding prevents visibly embedded ants inside wall faces
-- ant-top support was flattened into a rounded-rectangle-style approximation with a safer center and edge roll-off
-- tracked-ant debug now shows active grasp-leg labels and recent break / impact state
-- Phase 5 smoke tests were added to the repo as `npm run test:phase5`
+- added a dedicated `FoodSystem`
+- food nodes now have finite trip counts and shrink visibly as they are depleted
+- ants can pick up food only from fully-contained overlap, not edge touches
+- pickup consumes a meal and loads a carried food unit
+- carriers enter scripted physical return mode at reduced speed
+- carriers do not participate in grasp polling while hauling or saluting
+- carriers can traverse ant ridgelines while returning instead of getting locked to one back
+- carriers drop food to the queen's right, salute with the `reaching` pose, and reset to free mode
+- queen feeding now increments colony totals and immediately spawns new ants to the queen's left
+- spawn flow now already accepts a future `genomeSource` hook for evolution work
+- tracked debug can follow active food carriers and shows carry/return/queen totals
+- food carrying, shrink, salute, queen feed, and spawn were all visually confirmed in-browser
 
 ## Verification
-Automated checks currently passing:
-- `node --check` on Phase 5-modified systems
-- headless `SimulationController` single-tick instantiation
-- `npm run test:phase5`
+Current checks passing:
+- `node --check` on modified Phase 6 systems
+- headless `SimulationController` tick
 - `npm run spellcheck`
 
-Current smoke-test results:
-- Corner Priority: passed
-- Simple Bridge: passed
-- Wall Sheet: passed
-- Impact Jolt: passed
-- Long Idle: passed
-
 Observed in-browser behavior confirmed during this phase:
-- standing ants can ride on walking ants
-- grasped structures visibly jolt when impacted
-- free stacks still collapse outside the grasp-physics path
-- grounded grasped ants no longer tunnel beneath the terrain
+- food pickup occurs from within the food node
+- carried food appears visually on the ant
+- food nodes shrink after successful pickup
+- carriers can deliver to the queen and trigger a spawn
+- the salute beat plays on delivery
+- the debug focus can lock onto active food carriers
 
 ## Explicit Non-Goals (Still Not Implemented)
-- food pickup / carry-return interaction logic
+- food scent field propagation
+- scent input changes to the neural network
 - structural reward accounting
 - connection-tree contribution resolution
+- inherited offspring generation from successful parents
 - pheromone map simulation
-- queen reproduction / progression systems
 - death / recycling systems
 
 ## Current Systems Expected
 At minimum:
-- Ant entity/class with support, fall, attachment, and grasp-leg state
+- Ant entity/class with support, fall, attachment, grasp-leg, and food-carry state
+- Queen entity with delivery and spawn bookkeeping
 - NeuralNet feedforward module
 - BrainSystem input assembly and inference step
-- MovementSystem for locomotion, climbing, falling, and free-stack collapse
-- AttachmentSystem for poll-based grasp negotiation and anchor assignment
+- MovementSystem for locomotion, climbing, falling, free-stack collapse, and carrier return motion
+- AttachmentSystem for poll-based grasp negotiation with carrier exclusions
 - PhysicsSystem for spring-damper leg solving, bounce, and break behavior
-- Rendering layer with tracked-ant support / leg / break / impact debug
+- FoodSystem for pickup, depletion, carry, drop, delivery, and spawn triggers
+- Rendering layer with tracked-ant support / leg / carry / queen debug
 
 ## Known Constraints
 - Browser-first (no backend)
 - JavaScript (no TypeScript required)
 - PixiJS-based rendering
-- physics remain lightweight and local rather than full rigid-body simulation
-- support logic is intentionally stylized toward fun motion and readable structures
-- ant support surfaces are approximated rather than anatomically precise
+- current return-to-queen logic is scripted rather than learned
+- spawning is still random even though the interface now exposes a future genome hook
+- food scent is intentionally deferred to the next phase
 
 ## Environment Status
 - core workflow toolchain is healthy: `git`, `node`, `npm`, `gh`, `rg`, `fd`, `jq`, `bat`
@@ -83,19 +80,19 @@ At minimum:
 - shared workflow scripts exist for tool checking, GitHub status, spellcheck, and Phase 5 smoke tests
 
 ## Next Phase
-Phase 6 - Food System
+Phase 7 - Food Scent Map
 
 Primary focus for the next phase:
-- introduce food pickup and local food interaction behavior
-- make successful structural access to food matter mechanically
-- support return-to-queen flow once food is acquired
-- preserve the current readable structure-building loop while adding purpose to reaching targets
+- add a real food scent field in the world
+- feed that scent into the existing local sensor model
+- verify the new input reaches the network cleanly
+- preserve the currently working pickup / carry / delivery loop while expanding food-seeking behavior
 
 ## Immediate Next Actions
-1. Keep tuning Phase 5 feel if new visual edge cases show up
-2. Preserve the Phase 5 smoke suite as a regression check
-3. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting Phase 6 work
-4. Begin Phase 6 planning around food pickup, carry state, and return behavior
+1. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting scent work
+2. Plan the scent field representation and update order
+3. Decide where scent state lives: map-only vs dedicated system
+4. Add scent debug visibility before tuning values too aggressively
 
 ## Related Handoff Note
-- see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + session handoff context
+- see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context

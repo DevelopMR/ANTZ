@@ -35,8 +35,8 @@ export const ANT_TUNING = {
   wallSupportPadding: 4,
   climbSpeed: 58,
   climbIntentThreshold: 0.18,
-  climbHorizontalRange: 22,
   supportSnapDistance: 3,
+  climbHorizontalRange: 22,
   collapseScatterStepX: 18,
   collapseScatterStepY: 14,
   gravity: 320,
@@ -56,7 +56,7 @@ export const ANT_TUNING = {
   graspThrillBoostMin: 0.08,
   graspThrillBoostMax: 0.22,
   graspThrillDecayPerSecond: 0.08,
-  graspPollCooldownMin: 0.40,
+  graspPollCooldownMin: 0.4,
   graspPollCooldownMax: 1.4,
   graspLegSlotCount: 4,
   wallAnchorReachX: 18,
@@ -118,6 +118,22 @@ export const FOOD_TUNING = {
   smallNodeRadius: 10,
   largeNodeRadius: 14,
   minimumFoodRadiusRatio: 0.42,
+};
+
+export const FOOD_SCENT_TUNING = {
+  gridCellSize: 24,
+  decayPerSecond: 0.35,
+  diffusionRate: 0.18,
+  emissionStrength: 1.45,
+  emissionRadius: 140,
+  sampleClamp: 1,
+  overlayMinAlpha: 0.04,
+  overlayMaxAlpha: 0.3,
+  overlayThreshold: 0.03,
+  overlayColor: 0x6ba84a,
+  windBaseDirectionRadians: Math.PI,
+  windBaseSpeed: 0.4,
+  windVarianceRatio: 0.15,
 };
 
 export const SENSOR_TUNING = {

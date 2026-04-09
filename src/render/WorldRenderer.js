@@ -1,5 +1,13 @@
 import { Application, Container, Graphics, ParticleContainer, Text } from "https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.mjs";
-import { MAP_TUNING, NEURAL_TUNING, SENSOR_TUNING, SIMULATION_TUNING, WORLD_HEIGHT, WORLD_WIDTH } from "../config/tuning.js";
+import {
+  FOOD_SCENT_TUNING,
+  MAP_TUNING,
+  NEURAL_TUNING,
+  SENSOR_TUNING,
+  SIMULATION_TUNING,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+} from "../config/tuning.js";
 import { AntView } from "./AntView.js";
 import { createAntSpriteLibrary } from "./AntSpriteLibrary.js";
 
@@ -114,7 +122,6 @@ function formatBrainDebug(ant, simulation) {
   lines.push(`state ${ant.movement?.verticalState ?? "unknown"}`);
   lines.push(`support ${ant.movement?.supportType ?? "unknown"}`);
   lines.push(`legs ${activeLegCount}`);
-  lines.push(`meals ${ant.food?.mealsEaten ?? 0}`);
   lines.push(`carry ${formatScalar(ant.food?.carriedAmount ?? 0)}`);
   lines.push(`mode ${ant.food?.returnMode ?? "none"}`);
   if ((ant.food?.saluteTimer ?? 0) > 0) {
@@ -167,12 +174,14 @@ export class WorldRenderer {
     this.antSpriteLibrary = null;
     this.antLayer = null;
     this.foodLayer = null;
+    this.foodScentLayer = null;
     this.carryOverlay = null;
     this.sensorOverlay = null;
     this.sensorLabelLayer = null;
     this.sensorLabelTexts = [];
     this.legLabelTexts = [];
     this.brainDebugText = null;
+    this.showFoodScentMap = false;
   }
 
   async initialize(container) {
@@ -195,6 +204,7 @@ export class WorldRenderer {
 
     this.#drawWorldBackdrop();
     this.#drawMapGeometry();
+    this.#createFoodScentLayer();
     this.#createFoodLayer();
     this.#createGoalMarker();
     this.#createQueenMarker();
@@ -205,6 +215,7 @@ export class WorldRenderer {
 
   render(elapsedTime) {
     this.#syncAntViews();
+    this.#drawFoodScentMap();
     this.#drawFoodNodes();
     this.#drawCarryOverlay();
 
@@ -216,6 +227,10 @@ export class WorldRenderer {
 
   destroy() {
     this.app.destroy(true, { children: true });
+  }
+
+  setShowFoodScentMap(enabled) {
+    this.showFoodScentMap = enabled;
   }
 
   #drawWorldBackdrop() {
@@ -263,6 +278,43 @@ export class WorldRenderer {
     }
 
     this.worldContainer.addChild(geometry);
+  }
+
+  #createFoodScentLayer() {
+    this.foodScentLayer = new Graphics();
+    this.worldContainer.addChild(this.foodScentLayer);
+  }
+
+  #drawFoodScentMap() {
+    this.foodScentLayer.clear();
+    const overlay = this.simulation.foodScentSystem?.getOverlayState?.();
+    if (!this.showFoodScentMap || !overlay?.enabled) {
+      return;
+    }
+
+    for (let row = 0; row < overlay.rows; row += 1) {
+      for (let column = 0; column < overlay.columns; column += 1) {
+        const intensity = overlay.field[row * overlay.columns + column] ?? 0;
+        if (intensity < FOOD_SCENT_TUNING.overlayThreshold) {
+          continue;
+        }
+
+        const alpha = clamp(
+          FOOD_SCENT_TUNING.overlayMinAlpha + intensity * (FOOD_SCENT_TUNING.overlayMaxAlpha - FOOD_SCENT_TUNING.overlayMinAlpha),
+          FOOD_SCENT_TUNING.overlayMinAlpha,
+          FOOD_SCENT_TUNING.overlayMaxAlpha
+        );
+
+        this.foodScentLayer.beginFill(FOOD_SCENT_TUNING.overlayColor, alpha);
+        this.foodScentLayer.drawRect(
+          column * overlay.cellSize,
+          row * overlay.cellSize,
+          overlay.cellSize,
+          overlay.cellSize
+        );
+        this.foodScentLayer.endFill();
+      }
+    }
   }
 
   #createFoodLayer() {
@@ -342,14 +394,13 @@ export class WorldRenderer {
   }
 
   #drawSensorDebug() {
-    const carryingAnt = this.simulation.ants.find((candidate) => candidate.carryingFood || candidate.food?.carrying);
     const focusedAnt = this.simulation.debugFocusAntId != null
       ? this.simulation.ants.find((candidate) => candidate.id === this.simulation.debugFocusAntId)
       : null;
     const fallbackIndex = this.simulation.ants.length > 0
       ? Math.floor(this.simulation.elapsedTime * 0.7) % this.simulation.ants.length
       : SENSOR_TUNING.debugAntIndex;
-    const ant = carryingAnt ?? focusedAnt ?? this.simulation.ants[fallbackIndex] ?? this.simulation.ants[SENSOR_TUNING.debugAntIndex];
+    const ant = focusedAnt ?? this.simulation.ants[fallbackIndex] ?? this.simulation.ants[SENSOR_TUNING.debugAntIndex];
     if (!ant || !ant.sensorState?.rays || !ant.sensorState?.wedges) {
       this.sensorOverlay.clear();
       for (const label of this.sensorLabelTexts) {
@@ -509,9 +560,3 @@ export class WorldRenderer {
     }
   }
 }
-
-
-
-
-
-

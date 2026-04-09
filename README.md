@@ -8,27 +8,26 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project has completed Phase 5:
+The project has completed Phase 6:
 - side-view ant presentation and modular PixiJS rendering
-- lower-left colony spawn area and climb-test wall/food layout
 - fixed world-clock local sensing with ray-driven wedge aggregation
 - per-ant feedforward neural nets with explicit sensor-to-brain wiring
 - direct neural movement outputs: `xVel`, `yVel`, `graspIntent`, `interaction`
-- ant-on-ant climbing and perching behavior
-- local grasp polling with threshold-based attachment negotiation
-- temporary grasp groups with thrill-based persistence and decay
-- spring-damper grasp-leg physics with up to 4 active grasp legs per ant
-- ground / wall anchor priority with corner preference for walls
-- impact jolt, bounce, and break behavior for attached structures
-- support-floor and wall-padding polish to keep structures visually rational
-- tracked-ant debug for sensor wedges, brain IO, support state, grasp legs, and recent impact/break state
-- Phase 5 smoke coverage for corner priority, bridge stability, wall sheets, impact jolts, and long-idle boundedness
+- ant-on-ant climbing, perching, and spring-damper grasp physics
+- food pickup from full containment within food nodes
+- visible food depletion and shrinking food circles
+- automatic carry-back behavior with slower carrier motion
+- queen delivery, salute beat, and immediate spawning
+- spawn flow with a future `genomeSource` interface hook for evolution
+- tracked-ant debug for sensor wedges, brain IO, support state, grasp legs, carry state, and queen totals
 
 Not implemented yet:
-- food pickup / carry-return loop
+- food scent field and scent-driven seeking
 - reward accounting for structural contribution
+- connection tree resolution
+- inherited offspring generation from successful parents
 - pheromone map simulation
-- queen progression / reproduction
+- queen progression / reproduction policy
 - death / recycling
 
 ## Goals
@@ -84,14 +83,12 @@ Ant perception is currently shaped around local-only inputs such as:
 - nondirectional local food scent scalar
 - nondirectional pheromone scalar
 
-Phase 5 extends that brain-driven behavior into real structural motion:
-- ants may climb onto other ants and perch
-- perched ants may trigger local grasp polls
-- successful groups attach and transition into soft spring-damper grasp physics
-- grasping ants can anchor to ground, walls, and neighboring ants
-- falling ants can jolt and rebound off structures
-- unsupported motion still distinguishes intentional falls from collapse falls
-- support surfaces now bias toward a flatter central perch with roll-off near the edges
+Phase 6 completed the first full food loop:
+- ants can see food visually and interact with it
+- successful pickup consumes a meal and starts a scripted carry run
+- carriers can physically move across supports while returning to the queen
+- delivery drops food to the queen, triggers a salute, and causes immediate spawning
+- the offspring creation path already has a future hook for genome-based evolution work
 
 ## Project Structure
 
@@ -111,6 +108,7 @@ Key current files:
 - `src/systems/MovementSystem.js`
 - `src/systems/AttachmentSystem.js`
 - `src/systems/PhysicsSystem.js`
+- `src/systems/FoodSystem.js`
 - `src/systems/MapSystem.js`
 - `src/systems/SensorSystem.js`
 - `src/render/WorldRenderer.js`
@@ -118,20 +116,21 @@ Key current files:
 
 ## Build Roadmap
 
-Intended build sequence:
+Intended build sequence for the current implementation track:
 1. Core movement prototype
 2. Sensor system
 3. Neural network integration
 4. Attachment system
 5. Physics constraints
 6. Food system
-7. Connection tree + rewards
-8. Queen + reproduction
-9. Traits + mutation
-10. Pheromone system
-11. Death + recycling
-12. Map progression
-13. Visual polish
+7. Food scent map
+8. Connection tree + rewards
+9. Queen + reproduction
+10. Traits + mutation
+11. Pheromone system
+12. Death + recycling
+13. Map progression
+14. Visual polish
 
 ## Notes
 

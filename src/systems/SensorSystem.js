@@ -117,16 +117,16 @@ export class SensorSystem {
     this.rayLayout = createRayLayout();
   }
 
-  update(ants, mapSystem, queen) {
+  update(ants, mapSystem, queen, foodScentSystem) {
     const dynamicObjects = mapSystem.createDynamicSensorObjects(ants, queen);
     const dynamicIndex = mapSystem.buildDynamicSensorIndex(dynamicObjects);
 
     for (const ant of ants) {
-      this.#sampleAnt(ant, mapSystem, dynamicIndex);
+      this.#sampleAnt(ant, mapSystem, dynamicIndex, foodScentSystem);
     }
   }
 
-  #sampleAnt(ant, mapSystem, dynamicIndex) {
+  #sampleAnt(ant, mapSystem, dynamicIndex, foodScentSystem) {
     const sensorOrigin = getSensorOrigin(ant);
     const staticCandidates = mapSystem.getStaticSensorCandidates(sensorOrigin, SENSOR_TUNING.maxDistance);
     const dynamicCandidates = mapSystem.getDynamicSensorCandidates(
@@ -195,7 +195,7 @@ export class SensorSystem {
         visibleObjects: [],
       },
       scalars: {
-        foodScent: mapSystem.sampleFoodScentAt(ant.position),
+        foodScent: foodScentSystem?.sampleIntensityAt(ant.position) ?? mapSystem.sampleFoodScentAt(ant.position),
         pheromone: 0,
       },
     };
@@ -246,5 +246,3 @@ export class SensorSystem {
     };
   }
 }
-
-

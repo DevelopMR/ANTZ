@@ -8,14 +8,15 @@ Primary goals covered across this session:
 - stabilize the local Codex + terminal toolchain
 - add repo-level workflow helpers and spellcheck
 - complete Phase 5 physics constraints and its first polish pass
-- preserve enough context to resume cleanly into Phase 6
+- complete the first full Phase 6 food loop
+- preserve enough context to resume cleanly into the next scent-focused phase
 
 ## Project Snapshot
 
 - Repository: `d:\dev\ANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
-- Current documented phase: `Phase 5 - Physics Constraints Complete`
-- Next intended phase: `Phase 6 - Food System`
+- Current documented phase: `Phase 6 - Food System Complete`
+- Next intended phase: `Phase 7 - Food Scent Map`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -42,8 +43,6 @@ Important workflow additions now in the repo:
 - [.gitattributes](/d:/dev/ANTZ/.gitattributes)
 - [.gitignore](/d:/dev/ANTZ/.gitignore)
 - [.gitmessage](/d:/dev/ANTZ/.gitmessage)
-- [.vscode/launch.json](/d:/dev/ANTZ/.vscode/launch.json)
-- [.vscode/tasks.json](/d:/dev/ANTZ/.vscode/tasks.json)
 - [tooling/check-cli.js](/d:/dev/ANTZ/tooling/check-cli.js)
 - [tooling/gh-status.js](/d:/dev/ANTZ/tooling/gh-status.js)
 - [tooling/phase5-smoke.js](/d:/dev/ANTZ/tooling/phase5-smoke.js)
@@ -64,6 +63,7 @@ Current verification state:
 - `gh:status` works and GitHub auth is configured
 - repo spellcheck passes
 - Phase 5 smoke suite passes
+- headless Phase 6 simulation ticks pass
 
 ## Current Codebase State
 
@@ -79,78 +79,74 @@ Important current files and modules:
 - `src/systems/MovementSystem.js`
 - `src/systems/AttachmentSystem.js`
 - `src/systems/PhysicsSystem.js`
+- `src/systems/FoodSystem.js`
 - `src/systems/MapSystem.js`
 - `src/render/WorldRenderer.js`
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`
 
-## Phase 5 Summary
+## Phase 6 Summary
 
-Phase 5 is now functionally complete.
+Phase 6 is now functionally complete as a food-loop phase.
 
 Built during this phase:
-- dedicated `PhysicsSystem`
-- update order of `movement -> attachment -> physics`
-- per-ant grasp-leg state with up to 4 active legs
-- spring-damper structural behavior for ant-ant and ant-environment grasping
-- wall-first anchor priority in corners
-- attached ants stop self-walking but can ride supported ants
-- impact jolt, rebound, and link break behavior
-- support-floor clamping to stop underground tunneling
-- wall padding to stop visible wall penetration
-- flatter ant-top support profile with safer center and edge roll-off
-- tracked debug for active legs, break state, and impact state
+- dedicated `FoodSystem`
+- finite food nodes with visible shrink/depletion
+- pickup gated by full containment within food nodes
+- meal increment on pickup
+- automatic carry-back behavior with reduced carrier speed
+- queen delivery to the queen's right side
+- salute beat after delivery
+- immediate spawning to the queen's left side
+- carrier exclusions from grasp polling
+- ridgeline-style carrier traversal across ant-top supports
+- debug focus that can lock onto active food carriers
+- future-facing spawn interface hook through `spawnAntBatch({ count, origin, genomeSource })`
 
 Automated verification completed:
-- `node --check` on modified Phase 5 files
+- `node --check` on modified Phase 6 files
 - headless `SimulationController` tick
-- `npm run test:phase5`
 - `npm run spellcheck`
 
-Smoke-test results:
-- Corner Priority: passed
-- Simple Bridge: passed
-- Wall Sheet: passed
-- Impact Jolt: passed
-- Long Idle: passed
-
 User-observed behavior confirmed in-browser:
-- rideable ants on moving supports
-- visible jolt reactions after impacts
-- free-stack collapse still functioning
-- underground grasp-roll bug fixed
+- food pickup occurred
+- carrying ants showed the green carried-food marker
+- food nodes shrank on pickup
+- queen food and queen spawns increased on delivery
+- salute and spawn both occurred on successful return
+- the food interaction loop was observed end-to-end
 
 ## Notable Implementation Notes
 
-- The top surface of an ant is now treated more like a rounded-rectangle approximation than a pure precarious point.
-- The center region is intentionally safer for perched ants, while the edges still allow roll-off.
-- Wall collision/support behavior now includes padding similar in spirit to the ground anti-penetration fix.
-- Physics remain stylized for watchability rather than biologically accurate.
+- Carrier return is still scripted rather than learned.
+- Spawning remains random for now, but the interface now has a clean hook for future genome/trait-based offspring generation.
+- Food scent was intentionally deferred so the raw pickup/carry/delivery loop could be validated first.
+- The next phase should focus on scent field representation, local sensor integration, and debug visibility before heavy tuning.
 
 ## Remaining Near-Term Work
 
 Most likely next step:
-- start Phase 6 planning around food pickup, carry state, and return-to-queen behavior
+- start Phase 7 planning around a food scent field and how it plugs into the local sensor model
 
-Possible Phase 5 follow-up polish if needed:
-- further tune the new flatter support profile
-- adjust wall padding if a new edge case appears
-- refine bounce / jolt feel after more live observation
+Possible Phase 6 follow-up polish if needed:
+- further refine carrier traversal across dense ridgelines
+- improve focus-ant behavior if multiple carriers become common
+- tune pickup frequency and queen delivery spacing after scent arrives
 
 ## Session Close Summary
 
 Built or completed:
 - local workflow/tooling modernization
 - repo spellcheck setup
-- Phase 5 physics constraints
-- Phase 5 polish for ground/wall/support-surface visuals
-- Phase 5 smoke-test harness and passing results
+- Phase 5 physics constraints and polish
+- Phase 6 food loop
+- evolution-ready spawn interface hook
 
 Assumptions made:
-- stylized, fun structural motion is preferable to naturalistic insect realism
-- a rounded-rectangle-style ant support profile is a better gameplay surface than a fully circular one
-- the smoke suite should remain lightweight and regression-focused rather than exhaustive
+- scripting the return-to-queen behavior now is preferable to waiting for learned delivery
+- scent deserves its own dedicated next phase after the raw food loop is proven
+- offspring can remain random for now as long as the spawn path exposes a future genome handoff seam
 
 Remaining next:
-- begin Phase 6 planning
-- keep the Phase 5 smoke tests as regression coverage going forward
+- begin Phase 7 planning
+- add the food scent map and neural input integration
