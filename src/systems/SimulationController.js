@@ -57,7 +57,7 @@ export class SimulationController {
       this.attachmentSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.physicsSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.foodSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
-      this.#processQueenSpawnQueue();
+      this.#processQueenSpawnQueue(SIMULATION_TUNING.fixedTimeStep);
       const carryingAnt = this.ants.find((ant) => ant.carryingFood || ant.food?.carrying);
       this.debugFocusAntId = carryingAnt?.id ?? null;
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
@@ -79,17 +79,49 @@ export class SimulationController {
     this.foodScentSystem.setOverlayEnabled(enabled);
   }
 
-  #processQueenSpawnQueue() {
-    while (this.queen.pendingSpawnQueue.length > 0) {
-      const queuedSpawn = this.queen.pendingSpawnQueue.shift();
+  #processQueenSpawnQueue(deltaTime) {
+    this.queen.spawnCooldown = Math.max(0, this.queen.spawnCooldown - deltaTime);
+
+    while (this.queen.pendingSpawnQueue.length > 0 && !this.queen.pendingSpawnQueue[0].spawnPlan) {
+      const queuedSpawn = this.queen.pendingSpawnQueue[0];
+      queuedSpawn.spawnPlan = this.connectionTreeSystem.buildSpawnPlan(
+        queuedSpawn.payload,
+        queuedSpawn.count,
+        this.random
+      );
+      queuedSpawn.nextSpawnIndex = 0;
+      this.queen.pendingGenomePool = queuedSpawn.payload?.contributors?.map((contributor) => ({ ...contributor })) ?? [];
+      this.queen.pendingSpawnCount = queuedSpawn.spawnPlan.length;
+      if (!queuedSpawn.spawnPlan.length) {
+        this.queen.pendingSpawnQueue.shift();
+      }
+    }
+
+    if (this.queen.spawnCooldown > 0 || this.queen.pendingSpawnQueue.length === 0) {
+      return;
+    }
+
+    const queuedSpawn = this.queen.pendingSpawnQueue[0];
+    const genomeSource = queuedSpawn.spawnPlan[queuedSpawn.nextSpawnIndex] ?? null;
+    if (genomeSource) {
       this.spawnAntBatch({
-        count: queuedSpawn.count,
+        count: 1,
         origin: this.queen.position,
-        genomePicker: () => this.connectionTreeSystem.pickGenomeSource(queuedSpawn.payload, this.random),
+        genomeSource,
       });
-      this.queen.spawnedAntCount += queuedSpawn.count;
-      if (queuedSpawn.payload?.contributors?.length) {
-        this.queen.pendingGenomePool = queuedSpawn.payload.contributors.map((contributor) => ({ ...contributor }));
+      this.queen.spawnedAntCount += 1;
+      this.queen.spawnCooldown = FOOD_TUNING.spawnQueueInterval;
+      queuedSpawn.nextSpawnIndex += 1;
+      this.queen.pendingSpawnCount = Math.max(0, this.queen.pendingSpawnCount - 1);
+    } else {
+      queuedSpawn.nextSpawnIndex = queuedSpawn.spawnPlan.length;
+    }
+
+    if (queuedSpawn.nextSpawnIndex >= queuedSpawn.spawnPlan.length) {
+      this.queen.pendingSpawnQueue.shift();
+      if (this.queen.pendingSpawnQueue.length === 0) {
+        this.queen.pendingGenomePool = [];
+        this.queen.pendingSpawnCount = 0;
       }
     }
   }

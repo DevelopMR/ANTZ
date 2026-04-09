@@ -109,6 +109,7 @@ export const FOOD_TUNING = {
   saluteDuration: 0.5,
   spawnOnFeedMin: 1,
   spawnOnFeedMax: 3,
+  spawnQueueInterval: 3,
   spawnOffsetLeftMin: 18,
   spawnOffsetLeftMax: 68,
   droppedFoodGroundOffsetY: 18,
@@ -197,6 +198,7 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+
 
 
 

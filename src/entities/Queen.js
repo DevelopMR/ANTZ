@@ -8,5 +8,7 @@ export class Queen {
     this.lastFedTimer = 0;
     this.pendingSpawnQueue = [];
     this.pendingGenomePool = [];
+    this.spawnCooldown = 0;
+    this.pendingSpawnCount = 0;
   }
 }

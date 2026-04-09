@@ -37,6 +37,27 @@ function makeContributorEntry(antId, weight, role, depth) {
   };
 }
 
+function clonePack(pack) {
+  return {
+    packIndex: pack.packIndex,
+    obtainerId: pack.obtainerId,
+    baseType: pack.baseType,
+    baseId: pack.baseId,
+    contributors: (pack.contributors ?? []).map((contributor) => ({
+      antId: contributor.antId,
+      weight: contributor.weight,
+      role: contributor.role,
+      depth: contributor.depth,
+      genomeSnapshot: contributor.genomeSnapshot
+        ? {
+            brainLayers: cloneBrainLayers(contributor.genomeSnapshot.brainLayers),
+            traits: { ...contributor.genomeSnapshot.traits },
+          }
+        : null,
+    })),
+  };
+}
+
 export class ConnectionTreeSystem {
   resolveFoodContributionPath(obtainer, ants) {
     const antById = new Map(ants.map((ant) => [ant.id, ant]));
@@ -119,18 +140,7 @@ export class ConnectionTreeSystem {
     const merged = {
       acquisitionCount: (existingPayload?.acquisitionCount ?? 0) + 1,
       acquisitionPacks: [
-        ...(existingPayload?.acquisitionPacks ?? []).map((pack) => ({
-          ...pack,
-          contributors: (pack.contributors ?? []).map((contributor) => ({
-            ...contributor,
-            genomeSnapshot: contributor.genomeSnapshot
-              ? {
-                  brainLayers: cloneBrainLayers(contributor.genomeSnapshot.brainLayers),
-                  traits: { ...contributor.genomeSnapshot.traits },
-                }
-              : null,
-          })),
-        })),
+        ...(existingPayload?.acquisitionPacks ?? []).map((pack) => clonePack(pack)),
         acquisitionPack,
       ],
       contributors: new Map(),
@@ -185,6 +195,45 @@ export class ConnectionTreeSystem {
     };
   }
 
+  buildSpawnPlan(payload, totalCount, random) {
+    const packs = (payload?.acquisitionPacks ?? []).filter((pack) => (pack.contributors?.length ?? 0) > 0);
+    if (!packs.length || totalCount <= 0) {
+      return [];
+    }
+
+    const plan = [];
+    const basePerPack = Math.floor(totalCount / packs.length);
+    let remainder = totalCount % packs.length;
+
+    for (const pack of packs) {
+      const targetCount = basePerPack + (remainder > 0 ? 1 : 0);
+      remainder = Math.max(0, remainder - 1);
+
+      for (let index = 0; index < targetCount; index += 1) {
+        const selected = this.#pickContributorFromPack(pack, random);
+        if (!selected) {
+          continue;
+        }
+
+        plan.push({
+          antId: selected.antId,
+          weight: selected.weight,
+          role: selected.role,
+          depth: selected.depth,
+          packIndex: pack.packIndex,
+          genomeSnapshot: selected.genomeSnapshot
+            ? {
+                brainLayers: cloneBrainLayers(selected.genomeSnapshot.brainLayers),
+                traits: { ...selected.genomeSnapshot.traits },
+              }
+            : null,
+        });
+      }
+    }
+
+    return plan;
+  }
+
   pickGenomeSource(payload, random) {
     const weightedContributors = [];
 
@@ -234,6 +283,28 @@ export class ConnectionTreeSystem {
       weight: fallback.weight,
       genomeSnapshot: fallback.genomeSnapshot,
     };
+  }
+
+  #pickContributorFromPack(pack, random) {
+    const contributors = pack.contributors ?? [];
+    if (!contributors.length) {
+      return null;
+    }
+
+    const totalWeight = contributors.reduce((sum, contributor) => sum + contributor.weight, 0);
+    if (totalWeight <= 0) {
+      return contributors[0];
+    }
+
+    let roll = random() * totalWeight;
+    for (const contributor of contributors) {
+      roll -= contributor.weight;
+      if (roll <= 0) {
+        return contributor;
+      }
+    }
+
+    return contributors[contributors.length - 1];
   }
 
   #getSupportWeight(depth) {

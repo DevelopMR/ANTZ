@@ -153,6 +153,8 @@ function formatBrainDebug(ant, simulation) {
   lines.push(`queen food ${simulation?.queen?.foodReceived ?? 0}`);
   lines.push(`queen queue ${simulation?.queen?.pendingSpawnQueue?.length ?? 0}`);
   lines.push(`queen pool ${simulation?.queen?.pendingGenomePool?.length ?? 0}`);
+  lines.push(`queen pending ${simulation?.queen?.pendingSpawnCount ?? 0}`);
+  lines.push(`queen cooldown ${formatScalar(simulation?.queen?.spawnCooldown ?? 0)}`);
   lines.push(`queen spawns ${simulation?.queen?.spawnedAntCount ?? 0}`);
   lines.push(`fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`);
 
@@ -579,6 +581,7 @@ export class WorldRenderer {
     }
   }
 }
+
 
 
 
