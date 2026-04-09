@@ -398,7 +398,7 @@ export class WorldRenderer {
       ? this.simulation.ants.find((candidate) => candidate.id === this.simulation.debugFocusAntId)
       : null;
     const fallbackIndex = this.simulation.ants.length > 0
-      ? Math.floor(this.simulation.elapsedTime * 0.7) % this.simulation.ants.length
+      ? Math.floor(this.simulation.elapsedTime / SENSOR_TUNING.debugFallbackHoldSeconds) % this.simulation.ants.length
       : SENSOR_TUNING.debugAntIndex;
     const ant = focusedAnt ?? this.simulation.ants[fallbackIndex] ?? this.simulation.ants[SENSOR_TUNING.debugAntIndex];
     if (!ant || !ant.sensorState?.rays || !ant.sensorState?.wedges) {
@@ -560,3 +560,4 @@ export class WorldRenderer {
     }
   }
 }
+

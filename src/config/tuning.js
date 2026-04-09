@@ -132,8 +132,10 @@ export const FOOD_SCENT_TUNING = {
   overlayThreshold: 0.03,
   overlayColor: 0x6ba84a,
   windBaseDirectionRadians: Math.PI,
-  windBaseSpeed: 0.4,
+  windBaseSpeed: 0.7,
   windVarianceRatio: 0.15,
+  windDirectionVarianceRadians: 0.22,
+  windOscillationSeconds: 8,
 };
 
 export const SENSOR_TUNING = {
@@ -141,6 +143,7 @@ export const SENSOR_TUNING = {
   raysPerWedge: 3,
   maxDistance: 110,
   debugAntIndex: 0,
+  debugFallbackHoldSeconds: 4.3,
   spatialHashCellSize: 96,
   scalarInputCount: 2,
   wedgeCenters: [

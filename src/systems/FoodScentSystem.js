@@ -9,32 +9,28 @@ function createField(length) {
 }
 
 export class FoodScentSystem {
-  constructor() {
+  constructor(random = Math.random) {
+    this.random = random;
     this.cellSize = FOOD_SCENT_TUNING.gridCellSize;
     this.columns = Math.ceil(WORLD_WIDTH / this.cellSize);
     this.rows = Math.ceil(WORLD_HEIGHT / this.cellSize);
     this.field = createField(this.columns * this.rows);
     this.scratch = createField(this.columns * this.rows);
     this.overlayEnabled = false;
+    this.elapsedTime = 0;
+    this.wind = this.#createWindState();
   }
 
   update(mapSystem, deltaTime) {
-    this.#diffuseAndDecay(deltaTime);
+    this.elapsedTime += deltaTime;
+    this.#diffuseDecayAndTransport(deltaTime);
     this.#emitFoodSources(mapSystem, deltaTime);
   }
 
   sampleIntensityAt(position) {
     const cellX = clamp(position.x / this.cellSize, 0, this.columns - 1.001);
     const cellY = clamp(position.y / this.cellSize, 0, this.rows - 1.001);
-    const x0 = Math.floor(cellX);
-    const y0 = Math.floor(cellY);
-    const x1 = Math.min(this.columns - 1, x0 + 1);
-    const y1 = Math.min(this.rows - 1, y0 + 1);
-    const tx = cellX - x0;
-    const ty = cellY - y0;
-    const top = this.#getCell(x0, y0) * (1 - tx) + this.#getCell(x1, y0) * tx;
-    const bottom = this.#getCell(x0, y1) * (1 - tx) + this.#getCell(x1, y1) * tx;
-    return clamp(top * (1 - ty) + bottom * ty, 0, FOOD_SCENT_TUNING.sampleClamp);
+    return clamp(this.#sampleField(this.field, cellX, cellY), 0, FOOD_SCENT_TUNING.sampleClamp);
   }
 
   setOverlayEnabled(enabled) {
@@ -48,22 +44,54 @@ export class FoodScentSystem {
       columns: this.columns,
       rows: this.rows,
       cellSize: this.cellSize,
+      wind: this.wind,
     };
   }
 
-  #diffuseAndDecay(deltaTime) {
+  #createWindState() {
+    const baseDirection = FOOD_SCENT_TUNING.windBaseDirectionRadians;
+    const baseSpeed = FOOD_SCENT_TUNING.windBaseSpeed;
+    const directionOffset = (this.random() * 2 - 1) * FOOD_SCENT_TUNING.windDirectionVarianceRadians;
+    const speedScale = 1 + (this.random() * 2 - 1) * FOOD_SCENT_TUNING.windVarianceRatio;
+    return {
+      baseDirection,
+      baseSpeed: baseSpeed * speedScale,
+      phase: this.random() * Math.PI * 2,
+      x: 0,
+      y: 0,
+      direction: baseDirection + directionOffset,
+      speed: baseSpeed * speedScale,
+    };
+  }
+
+  #updateWind() {
+    const oscillation = Math.sin((this.elapsedTime / FOOD_SCENT_TUNING.windOscillationSeconds) * Math.PI * 2 + this.wind.phase);
+    const directionOffset = oscillation * FOOD_SCENT_TUNING.windDirectionVarianceRadians * FOOD_SCENT_TUNING.windVarianceRatio;
+    const speedScale = 1 + oscillation * FOOD_SCENT_TUNING.windVarianceRatio;
+    this.wind.direction = this.wind.baseDirection + directionOffset;
+    this.wind.speed = this.wind.baseSpeed * speedScale;
+    this.wind.x = Math.cos(this.wind.direction) * this.wind.speed;
+    this.wind.y = Math.sin(this.wind.direction) * this.wind.speed;
+  }
+
+  #diffuseDecayAndTransport(deltaTime) {
+    this.#updateWind();
     const decayFactor = Math.max(0, 1 - FOOD_SCENT_TUNING.decayPerSecond * deltaTime);
+    const driftX = this.wind.x * deltaTime;
+    const driftY = this.wind.y * deltaTime;
 
     for (let row = 0; row < this.rows; row += 1) {
       for (let column = 0; column < this.columns; column += 1) {
-        const center = this.#getCell(column, row);
-        const left = this.#getCell(Math.max(0, column - 1), row);
-        const right = this.#getCell(Math.min(this.columns - 1, column + 1), row);
-        const up = this.#getCell(column, Math.max(0, row - 1));
-        const down = this.#getCell(column, Math.min(this.rows - 1, row + 1));
+        const sampleX = clamp(column - driftX, 0, this.columns - 1.001);
+        const sampleY = clamp(row - driftY, 0, this.rows - 1.001);
+        const center = this.#sampleField(this.field, sampleX, sampleY);
+        const left = this.#sampleField(this.field, sampleX - 1, sampleY);
+        const right = this.#sampleField(this.field, sampleX + 1, sampleY);
+        const up = this.#sampleField(this.field, sampleX, sampleY - 1);
+        const down = this.#sampleField(this.field, sampleX, sampleY + 1);
         const neighborAverage = (left + right + up + down) * 0.25;
         const blended = center + (neighborAverage - center) * FOOD_SCENT_TUNING.diffusionRate;
-        this.scratch[this.#index(column, row)] = blended * decayFactor;
+        this.scratch[this.#index(column, row)] = clamp(blended * decayFactor, 0, FOOD_SCENT_TUNING.sampleClamp);
       }
     }
 
@@ -113,7 +141,18 @@ export class FoodScentSystem {
     return row * this.columns + column;
   }
 
-  #getCell(column, row) {
-    return this.field[this.#index(column, row)] ?? 0;
+  #sampleField(field, column, row) {
+    const cellX = clamp(column, 0, this.columns - 1.001);
+    const cellY = clamp(row, 0, this.rows - 1.001);
+    const x0 = Math.floor(cellX);
+    const y0 = Math.floor(cellY);
+    const x1 = Math.min(this.columns - 1, x0 + 1);
+    const y1 = Math.min(this.rows - 1, y0 + 1);
+    const tx = cellX - x0;
+    const ty = cellY - y0;
+    const top = (field[this.#index(x0, y0)] ?? 0) * (1 - tx) + (field[this.#index(x1, y0)] ?? 0) * tx;
+    const bottom = (field[this.#index(x0, y1)] ?? 0) * (1 - tx) + (field[this.#index(x1, y1)] ?? 0) * tx;
+    return top * (1 - ty) + bottom * ty;
   }
 }
+
