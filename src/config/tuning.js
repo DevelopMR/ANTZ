@@ -186,6 +186,9 @@ export const CONNECTION_TREE_TUNING = {
   maxSupportDepth: 4,
   obtainerWeight: 1,
   supportDepthWeights: [0.45, 0.2, 0.08, 0.03],
+  brainMutationRate: 0.06,
+  brainMutationMagnitude: 0.12,
+  traitMutationRange: 0.06,
 };
 export const MAP_TUNING = {
   groundColor: 0xd0ae79,
@@ -194,6 +197,7 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+
 
 
 

@@ -8,7 +8,7 @@ import { FoodScentSystem } from "./FoodScentSystem.js";
 import { ConnectionTreeSystem } from "./ConnectionTreeSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
-import { ANT_TUNING, FOOD_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, CONNECTION_TREE_TUNING, FOOD_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 import { MovementSystem } from "./MovementSystem.js";
 
 function randomRange(random, min, max) {
@@ -110,20 +110,26 @@ export class SimulationController {
   #createAnt(position, genomeSource = null) {
     const initialDirection = this.random() > 0.35 ? 1 : -1;
     const visualState = ANT_TUNING.visualStateCycle[this.nextAntId % ANT_TUNING.visualStateCycle.length];
+    const parentAnt = this.#resolveParentAnt(genomeSource);
+    const movementProfile = {
+      forwardBias: parentAnt
+        ? this.#mutateTrait(parentAnt.traits.forwardBias)
+        : randomRange(this.random, 0.92, 1.08),
+      turnResponsiveness: parentAnt
+        ? this.#mutateTrait(parentAnt.traits.turnResponsiveness)
+        : randomRange(this.random, 0.85, 1.15),
+      initialDirection,
+      groundY: position.y,
+      postureTimer: randomRange(
+        this.random,
+        ANT_TUNING.postureDurationMin,
+        ANT_TUNING.postureDurationMax
+      ),
+    };
     const ant = new Ant({
       id: this.nextAntId,
       position,
-      movementProfile: {
-        forwardBias: randomRange(this.random, 0.92, 1.08),
-        turnResponsiveness: randomRange(this.random, 0.85, 1.15),
-        initialDirection,
-        groundY: position.y,
-        postureTimer: randomRange(
-          this.random,
-          ANT_TUNING.postureDurationMin,
-          ANT_TUNING.postureDurationMax
-        ),
-      },
+      movementProfile,
       visualProfile: {
         state: visualState,
         facing: initialDirection,
@@ -133,8 +139,29 @@ export class SimulationController {
       random: this.random,
     });
 
+    if (parentAnt) {
+      ant.brain = parentAnt.brain.clone().mutate({
+        rate: CONNECTION_TREE_TUNING.brainMutationRate,
+        magnitude: CONNECTION_TREE_TUNING.brainMutationMagnitude,
+        random: this.random,
+      });
+    }
+
     ant.lineageSource = genomeSource;
     this.nextAntId += 1;
     return ant;
   }
+
+  #resolveParentAnt(genomeSource) {
+    if (!genomeSource || genomeSource.antId == null) {
+      return null;
+    }
+
+    return this.ants.find((ant) => ant.id === genomeSource.antId) ?? null;
+  }
+
+  #mutateTrait(value) {
+    return value + randomRange(this.random, -CONNECTION_TREE_TUNING.traitMutationRange, CONNECTION_TREE_TUNING.traitMutationRange);
+  }
 }
+
