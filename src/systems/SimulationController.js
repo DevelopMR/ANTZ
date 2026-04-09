@@ -1,3 +1,4 @@
+import { NeuralNet } from "../ai/NeuralNet.js";
 import { MapSystem } from "./MapSystem.js";
 import { SensorSystem } from "./SensorSystem.js";
 import { BrainSystem } from "./BrainSystem.js";
@@ -8,7 +9,7 @@ import { FoodScentSystem } from "./FoodScentSystem.js";
 import { ConnectionTreeSystem } from "./ConnectionTreeSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
-import { ANT_TUNING, CONNECTION_TREE_TUNING, FOOD_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, CONNECTION_TREE_TUNING, FOOD_TUNING, NEURAL_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
 import { MovementSystem } from "./MovementSystem.js";
 
 function randomRange(random, min, max) {
@@ -110,13 +111,13 @@ export class SimulationController {
   #createAnt(position, genomeSource = null) {
     const initialDirection = this.random() > 0.35 ? 1 : -1;
     const visualState = ANT_TUNING.visualStateCycle[this.nextAntId % ANT_TUNING.visualStateCycle.length];
-    const parentAnt = this.#resolveParentAnt(genomeSource);
+    const parentGenome = this.#resolveParentGenome(genomeSource);
     const movementProfile = {
-      forwardBias: parentAnt
-        ? this.#mutateTrait(parentAnt.traits.forwardBias)
+      forwardBias: parentGenome?.traits
+        ? this.#mutateTrait(parentGenome.traits.forwardBias)
         : randomRange(this.random, 0.92, 1.08),
-      turnResponsiveness: parentAnt
-        ? this.#mutateTrait(parentAnt.traits.turnResponsiveness)
+      turnResponsiveness: parentGenome?.traits
+        ? this.#mutateTrait(parentGenome.traits.turnResponsiveness)
         : randomRange(this.random, 0.85, 1.15),
       initialDirection,
       groundY: position.y,
@@ -139,8 +140,14 @@ export class SimulationController {
       random: this.random,
     });
 
-    if (parentAnt) {
-      ant.brain = parentAnt.brain.clone().mutate({
+    if (parentGenome?.brainLayers?.length) {
+      ant.brain = new NeuralNet({
+        inputCount: NEURAL_TUNING.inputCount,
+        hiddenLayers: NEURAL_TUNING.hiddenLayers,
+        outputCount: NEURAL_TUNING.outputCount,
+        outputActivations: ["tanh", "tanh", "sigmoid", "sigmoid"],
+        layers: parentGenome.brainLayers,
+      }).mutate({
         rate: CONNECTION_TREE_TUNING.brainMutationRate,
         magnitude: CONNECTION_TREE_TUNING.brainMutationMagnitude,
         random: this.random,
@@ -152,16 +159,34 @@ export class SimulationController {
     return ant;
   }
 
-  #resolveParentAnt(genomeSource) {
-    if (!genomeSource || genomeSource.antId == null) {
+  #resolveParentGenome(genomeSource) {
+    if (!genomeSource) {
       return null;
     }
 
-    return this.ants.find((ant) => ant.id === genomeSource.antId) ?? null;
+    if (genomeSource.genomeSnapshot) {
+      return genomeSource.genomeSnapshot;
+    }
+
+    if (genomeSource.antId == null) {
+      return null;
+    }
+
+    const parentAnt = this.ants.find((ant) => ant.id === genomeSource.antId) ?? null;
+    if (!parentAnt) {
+      return null;
+    }
+
+    return {
+      brainLayers: parentAnt.brain.clone().layers,
+      traits: {
+        forwardBias: parentAnt.traits.forwardBias,
+        turnResponsiveness: parentAnt.traits.turnResponsiveness,
+      },
+    };
   }
 
   #mutateTrait(value) {
     return value + randomRange(this.random, -CONNECTION_TREE_TUNING.traitMutationRange, CONNECTION_TREE_TUNING.traitMutationRange);
   }
 }
-

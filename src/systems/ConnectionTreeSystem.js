@@ -4,6 +4,30 @@ function roundWeight(value) {
   return Math.round(value * 1000) / 1000;
 }
 
+function cloneBrainLayers(layers) {
+  return (layers ?? []).map((layer) => ({
+    activation: layer.activation,
+    weights: layer.weights.map((row) => [...row]),
+    biases: [...layer.biases],
+  }));
+}
+
+function snapshotAntGenome(ant, contributor) {
+  return {
+    antId: ant.id,
+    weight: roundWeight(contributor.weight),
+    role: contributor.role,
+    depth: contributor.depth,
+    genomeSnapshot: {
+      brainLayers: cloneBrainLayers(ant.brain?.layers ?? []),
+      traits: {
+        forwardBias: ant.traits.forwardBias,
+        turnResponsiveness: ant.traits.turnResponsiveness,
+      },
+    },
+  };
+}
+
 function makeContributorEntry(antId, weight, role, depth) {
   return {
     antId,
@@ -77,9 +101,38 @@ export class ConnectionTreeSystem {
     };
   }
 
-  mergePayload(existingPayload, contributionPath) {
+  mergePayload(existingPayload, contributionPath, ants) {
+    const antById = new Map(ants.map((ant) => [ant.id, ant]));
+    const acquisitionPack = {
+      packIndex: existingPayload?.acquisitionPacks?.length ?? 0,
+      obtainerId: contributionPath.obtainerId,
+      baseType: contributionPath.baseType,
+      baseId: contributionPath.baseId,
+      contributors: contributionPath.contributors
+        .map((contributor) => {
+          const ant = antById.get(contributor.antId);
+          return ant ? snapshotAntGenome(ant, contributor) : null;
+        })
+        .filter(Boolean),
+    };
+
     const merged = {
       acquisitionCount: (existingPayload?.acquisitionCount ?? 0) + 1,
+      acquisitionPacks: [
+        ...(existingPayload?.acquisitionPacks ?? []).map((pack) => ({
+          ...pack,
+          contributors: (pack.contributors ?? []).map((contributor) => ({
+            ...contributor,
+            genomeSnapshot: contributor.genomeSnapshot
+              ? {
+                  brainLayers: cloneBrainLayers(contributor.genomeSnapshot.brainLayers),
+                  traits: { ...contributor.genomeSnapshot.traits },
+                }
+              : null,
+          })),
+        })),
+        acquisitionPack,
+      ],
       contributors: new Map(),
       latestPath: {
         obtainerId: contributionPath.obtainerId,
@@ -126,40 +179,60 @@ export class ConnectionTreeSystem {
 
     return {
       acquisitionCount: merged.acquisitionCount,
+      acquisitionPacks: merged.acquisitionPacks,
       contributors,
       latestPath: merged.latestPath,
     };
   }
 
   pickGenomeSource(payload, random) {
-    const contributors = payload?.contributors ?? [];
-    if (!contributors.length) {
-      return null;
+    const weightedContributors = [];
+
+    for (const pack of payload?.acquisitionPacks ?? []) {
+      for (const contributor of pack.contributors ?? []) {
+        weightedContributors.push(contributor);
+      }
     }
 
-    const totalWeight = contributors.reduce((sum, contributor) => sum + contributor.weight, 0);
-    if (totalWeight <= 0) {
+    if (!weightedContributors.length) {
+      const contributors = payload?.contributors ?? [];
+      if (!contributors.length) {
+        return null;
+      }
+
       return {
         antId: contributors[0].antId,
         weight: contributors[0].weight,
       };
     }
 
+    const totalWeight = weightedContributors.reduce((sum, contributor) => sum + contributor.weight, 0);
+    if (totalWeight <= 0) {
+      const fallback = weightedContributors[0];
+      return {
+        antId: fallback.antId,
+        weight: fallback.weight,
+        genomeSnapshot: fallback.genomeSnapshot,
+      };
+    }
+
     let roll = random() * totalWeight;
-    for (const contributor of contributors) {
+    for (const contributor of weightedContributors) {
       roll -= contributor.weight;
       if (roll <= 0) {
         return {
           antId: contributor.antId,
           weight: contributor.weight,
+          genomeSnapshot: contributor.genomeSnapshot,
         };
       }
     }
 
-    const fallback = contributors[contributors.length - 1];
+    const fallback = weightedContributors[weightedContributors.length - 1];
     return {
       antId: fallback.antId,
       weight: fallback.weight,
+      genomeSnapshot: fallback.genomeSnapshot,
     };
   }
 

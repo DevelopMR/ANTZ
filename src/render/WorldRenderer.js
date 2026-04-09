@@ -127,6 +127,7 @@ function formatBrainDebug(ant, simulation) {
   const carriedPayload = ant.food?.carriedPayload;
   if (carriedPayload) {
     lines.push(`payload grabs ${carriedPayload.acquisitionCount ?? 0}`);
+    lines.push(`payload packs ${carriedPayload.acquisitionPacks?.length ?? 0}`);
     for (const contributor of carriedPayload.contributors.slice(0, 4)) {
       lines.push(`reward ant-${contributor.antId} ${formatScalar(contributor.weight)}`);
     }
@@ -578,5 +579,6 @@ export class WorldRenderer {
     }
   }
 }
+
 
 

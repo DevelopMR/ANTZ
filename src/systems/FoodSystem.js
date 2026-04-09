@@ -7,6 +7,7 @@ function clamp(value, min, max) {
 function countActiveLegs(ant) {
   return ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
 }
+
 function getFoodPickupProbePosition(ant) {
   return {
     x: ant.position.x,
@@ -21,6 +22,28 @@ function clonePayload(payload) {
 
   return {
     acquisitionCount: payload.acquisitionCount ?? 0,
+    acquisitionPacks: (payload.acquisitionPacks ?? []).map((pack) => ({
+      packIndex: pack.packIndex,
+      obtainerId: pack.obtainerId,
+      baseType: pack.baseType,
+      baseId: pack.baseId,
+      contributors: (pack.contributors ?? []).map((contributor) => ({
+        antId: contributor.antId,
+        weight: contributor.weight,
+        role: contributor.role,
+        depth: contributor.depth,
+        genomeSnapshot: contributor.genomeSnapshot
+          ? {
+              brainLayers: (contributor.genomeSnapshot.brainLayers ?? []).map((layer) => ({
+                activation: layer.activation,
+                weights: layer.weights.map((row) => [...row]),
+                biases: [...layer.biases],
+              })),
+              traits: { ...contributor.genomeSnapshot.traits },
+            }
+          : null,
+      })),
+    })),
     contributors: (payload.contributors ?? []).map((contributor) => ({ ...contributor })),
     latestPath: payload.latestPath
       ? {
@@ -95,7 +118,7 @@ export class FoodSystem {
     }
 
     const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
-    const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath);
+    const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath, ants);
 
     if (ant.attached || countActiveLegs(ant) > 0) {
       simulationController.attachmentSystem.releaseAntForFoodCarry(ant, ants);
@@ -171,6 +194,3 @@ export class FoodSystem {
     return FOOD_TUNING.spawnOnFeedMin + Math.floor(this.random() * span);
   }
 }
-
-
-
