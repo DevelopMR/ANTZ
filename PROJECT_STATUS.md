@@ -4,74 +4,83 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 6 - Food System Complete
+Phase 8 - Connection Tree + Rewards Complete
 
 ## Phase Goal
-Phase 6 made food mechanically meaningful without jumping ahead into full evolution. The completed food loop now lets ants:
-- visually detect food as green circles through the existing wedge system
-- interact only when fully inside the food pickup zone
-- consume a meal portion on pickup
-- carry food in an automatic return-to-queen mode
-- drop food at the queen's right side, salute, and return to free-ant behavior
-- trigger immediate queen-fed spawning
-- lose carried food if they fall during the return trip
+Phase 8 turned successful food acquisition into the first real evolution reward pipeline. The completed phase now:
+- traces a simple direct support path from the obtaining ant toward ground or wall
+- records weighted contributors from that path
+- stores those contributors as genetic packs on the food itself
+- preserves and extends that payload if food is dropped and re-grabbed
+- queues queen spawning separately from food delivery
+- converts queued food into spaced-out offspring using balanced pack-aware selection
 
 ## What Was Built
-- added a dedicated `FoodSystem`
-- food nodes now have finite trip counts and shrink visibly as they are depleted
-- ants can pick up food only from fully-contained overlap, not edge touches
-- pickup consumes a meal and loads a carried food unit
-- carriers enter scripted physical return mode at reduced speed
-- carriers do not participate in grasp polling while hauling or saluting
-- carriers can traverse ant ridgelines while returning instead of getting locked to one back
-- carriers drop food to the queen's right, salute with the `reaching` pose, and reset to free mode
-- queen feeding now increments colony totals and immediately spawns new ants to the queen's left
-- spawn flow now already accepts a future `genomeSource` hook for evolution work
-- tracked debug can follow active food carriers and shows carry/return/queen totals
-- food carrying, shrink, salute, queen feed, and spawn were all visually confirmed in-browser
+- added a dedicated `ConnectionTreeSystem`
+- resolved a direct reward path from the obtaining ant down its support chain
+- weighted obtainer and support-depth contribution in centralized tuning
+- added real `acquisitionPacks` to food payloads, including packed brain layers and trait snapshots
+- merged repeated grabs of the same food into the payload as additional packs
+- moved queen reproduction to a queue-driven spawn flow instead of instant burst spawning at delivery time
+- added a spawn cooldown so multiple deliveries can stack without blocking food carriers
+- balanced spawn planning across acquisition packs before weighted per-pack genome selection
+- made spawned ants inherit packed genome snapshots with light mutation to brain and movement traits
+- curated the early map so the first elevated foods push more climbing / structure pressure
+- cleaned up the main debug layout into separate Inputs / Outputs / Tracked Ant / Scenario blocks
 
 ## Verification
 Current checks passing:
-- `node --check` on modified Phase 6 systems
+- `node --check` on modified Phase 8 systems
 - headless `SimulationController` tick
 - `npm run spellcheck`
 
 Observed in-browser behavior confirmed during this phase:
-- food pickup occurs from within the food node
-- carried food appears visually on the ant
-- food nodes shrink after successful pickup
-- carriers can deliver to the queen and trigger a spawn
-- the salute beat plays on delivery
-- the debug focus can lock onto active food carriers
+- food pickup / carry / delivery loop remained active after reward integration
+- reward-path context appears in the tracked carrier debug
+- payload packs are being created and carried with the food
+- queen food queue converts deliveries into delayed spawns over time
+- offspring continue spawning while the simulation remains stable
+- elevated foods now bias the colony toward higher climbing / support attempts
+- reorganized debug layout is easier to read during live observation
 
 ## Explicit Non-Goals (Still Not Implemented)
-- food scent field propagation
-- scent input changes to the neural network
-- structural reward accounting
-- connection-tree contribution resolution
-- inherited offspring generation from successful parents
+- full lateral / delta structural credit
+- complex continuous graph solving every frame
+- final reproduction policy and queen progression rules
+- broader trait system beyond the current inherited movement hooks
 - pheromone map simulation
 - death / recycling systems
 
 ## Current Systems Expected
 At minimum:
-- Ant entity/class with support, fall, attachment, grasp-leg, and food-carry state
-- Queen entity with delivery and spawn bookkeeping
-- NeuralNet feedforward module
+- Ant entity/class with support, fall, attachment, grasp-leg, food-carry, and lineage state
+- Queen entity with delivery totals, queued spawn state, and pending genome pool debug
+- NeuralNet feedforward module with clone + mutate support
 - BrainSystem input assembly and inference step
 - MovementSystem for locomotion, climbing, falling, free-stack collapse, and carrier return motion
-- AttachmentSystem for poll-based grasp negotiation with carrier exclusions
+- AttachmentSystem for poll-based grasp negotiation plus carrier release-for-food handling
 - PhysicsSystem for spring-damper leg solving, bounce, and break behavior
-- FoodSystem for pickup, depletion, carry, drop, delivery, and spawn triggers
-- Rendering layer with tracked-ant support / leg / carry / queen debug
+- FoodSystem for pickup, depletion, carry, drop, delivery, and queue handoff
+- FoodScentSystem for scent field update, drift, and scalar sampling
+- ConnectionTreeSystem for support-path resolution, payload packing, and spawn-plan generation
+- Rendering layer with tracked-ant support / leg / reward / queen queue debug
 
 ## Known Constraints
 - Browser-first (no backend)
 - JavaScript (no TypeScript required)
 - PixiJS-based rendering
-- current return-to-queen logic is scripted rather than learned
-- spawning is still random even though the interface now exposes a future genome hook
-- food scent is intentionally deferred to the next phase
+- current return-to-queen logic is still scripted rather than learned
+- reward attribution is intentionally simple and only follows the direct support path
+- equal division across acquisition packs may preserve diversity at the cost of some short-term selection sharpness
+- stronger long-run scent-driven behavior is still expected to emerge later through evolution
+
+## Warning Predictions
+These are not blockers, but they should be watched in later analysis:
+- reward fairness may under-credit ants that mattered physically without being in the direct traced chain
+- queue readability may need stronger visualization if spawn delays are increased later
+- pack balancing may feel flatter than expected if very strong and very weak packs are forced into equal shares
+- current mutation strength may need retuning once longer-run lineage drift is observable
+- richer pack / spawn debug may become necessary if parent-selection fairness is questioned
 
 ## Environment Status
 - core workflow toolchain is healthy: `git`, `node`, `npm`, `gh`, `rg`, `fd`, `jq`, `bat`
@@ -80,20 +89,19 @@ At minimum:
 - shared workflow scripts exist for tool checking, GitHub status, spellcheck, and Phase 5 smoke tests
 
 ## Next Phase
-Phase 7 - Food Scent Map
+Phase 9 - Queen and Reproduction
 
 Primary focus for the next phase:
-- add a real food scent field in the world
-- feed that scent into the existing local sensor model
-- verify the new input reaches the network cleanly
-- preserve the currently working pickup / carry / delivery loop while expanding food-seeking behavior
+- define the queen's actual eating / processing behavior beyond simple queue timing
+- shape reproduction policy and cadence more explicitly
+- clarify how queued food becomes colony growth over time
+- preserve the currently working reward packs and queued spawn plumbing while making queen behavior more intentional
 
 ## Immediate Next Actions
-1. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting scent work
-2. Plan the scent field representation and update order
-3. Decide where scent state lives: map-only vs dedicated system
-4. Add scent debug visibility before tuning values too aggressively
+1. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting queen / reproduction work
+2. Plan how queen processing differs from the current queue placeholder timing
+3. Decide what belongs to queen policy vs what remains in generic food / reward systems
+4. Add any debug needed to watch queen-side processing before tuning too aggressively
 
 ## Related Handoff Note
 - see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context
-

@@ -8,27 +8,27 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project has completed Phase 6:
+The project has completed Phase 8:
 - side-view ant presentation and modular PixiJS rendering
 - fixed world-clock local sensing with ray-driven wedge aggregation
 - per-ant feedforward neural nets with explicit sensor-to-brain wiring
 - direct neural movement outputs: `xVel`, `yVel`, `graspIntent`, `interaction`
 - ant-on-ant climbing, perching, and spring-damper grasp physics
-- food pickup from full containment within food nodes
-- visible food depletion and shrinking food circles
-- automatic carry-back behavior with slower carrier motion
-- queen delivery, salute beat, and immediate spawning
-- spawn flow with a future `genomeSource` interface hook for evolution
-- tracked-ant debug for sensor wedges, brain IO, support state, grasp legs, carry state, and queen totals
+- full food pickup / carry / delivery / spawn loop
+- food scent field with diffusion, decay, and wind drift
+- direct support-path reward tracing for food acquisition
+- packed food genome payloads with repeat-grab accumulation
+- queue-driven queen spawning with pack-balanced offspring planning
+- inherited offspring brains and movement traits from queued genome snapshots
+- reorganized tracked-ant debug for inputs, outputs, ant state, and scenario stats
 
 Not implemented yet:
-- food scent field and scent-driven seeking
-- reward accounting for structural contribution
-- connection tree resolution
-- inherited offspring generation from successful parents
+- final queen progression / reproduction policy
+- broader structural credit beyond the direct support path
+- richer trait system beyond current inherited movement hooks
 - pheromone map simulation
-- queen progression / reproduction policy
 - death / recycling
+- map progression and late-game polish
 
 ## Goals
 
@@ -83,12 +83,12 @@ Ant perception is currently shaped around local-only inputs such as:
 - nondirectional local food scent scalar
 - nondirectional pheromone scalar
 
-Phase 6 completed the first full food loop:
-- ants can see food visually and interact with it
-- successful pickup consumes a meal and starts a scripted carry run
-- carriers can physically move across supports while returning to the queen
-- delivery drops food to the queen, triggers a salute, and causes immediate spawning
-- the offspring creation path already has a future hook for genome-based evolution work
+Phase 8 completed the first real reward pipeline:
+- ants now earn structural reward through the direct support path beneath a successful food grab
+- that reward is packed onto the food as one or more genome sets
+- repeated grabs append additional acquisition packs instead of overwriting earlier ones
+- the queen now consumes queued food rewards over time instead of spawning everything instantly
+- offspring are selected from those packed genome sets and inherit mutated brain/trait snapshots
 
 ## Project Structure
 
@@ -109,6 +109,8 @@ Key current files:
 - `src/systems/AttachmentSystem.js`
 - `src/systems/PhysicsSystem.js`
 - `src/systems/FoodSystem.js`
+- `src/systems/FoodScentSystem.js`
+- `src/systems/ConnectionTreeSystem.js`
 - `src/systems/MapSystem.js`
 - `src/systems/SensorSystem.js`
 - `src/render/WorldRenderer.js`
@@ -125,7 +127,7 @@ Intended build sequence for the current implementation track:
 6. Food system
 7. Food scent map
 8. Connection Tree + Rewards
-9. Queen + reproduction
+9. Queen and Reproduction
 10. Traits + mutation
 11. Pheromone system
 12. Death + recycling
@@ -137,4 +139,3 @@ Intended build sequence for the current implementation track:
 This repository is being built phase-by-phase. The current code intentionally leaves hooks for future systems, but avoids implementing future mechanics too early.
 
 If you are contributing, use the repository design docs and architecture notes as the source of truth before extending systems.
-

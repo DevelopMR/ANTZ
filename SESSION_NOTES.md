@@ -7,16 +7,18 @@ This note is a restart-safe handoff for the current state of the ANTZ repository
 Primary goals covered across this session:
 - stabilize the local Codex + terminal toolchain
 - add repo-level workflow helpers and spellcheck
-- complete Phase 5 physics constraints and its first polish pass
-- complete the first full Phase 6 food loop
-- preserve enough context to resume cleanly into the next scent-focused phase
+- complete Phase 5 physics constraints and polish
+- complete Phase 6 food loop
+- complete Phase 7 food scent map
+- complete Phase 8 connection tree + rewards
+- preserve enough context to resume cleanly into queen/reproduction work
 
 ## Project Snapshot
 
 - Repository: `d:\dev\ANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
-- Current documented phase: `Phase 6 - Food System Complete`
-- Next intended phase: `Phase 7 - Food Scent Map`
+- Current documented phase: `Phase 8 - Connection Tree + Rewards Complete`
+- Next intended phase: `Phase 9 - Queen and Reproduction`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -63,7 +65,7 @@ Current verification state:
 - `gh:status` works and GitHub auth is configured
 - repo spellcheck passes
 - Phase 5 smoke suite passes
-- headless Phase 7 simulation ticks pass
+- headless Phase 8 simulation ticks pass
 
 ## Current Codebase State
 
@@ -80,58 +82,67 @@ Important current files and modules:
 - `src/systems/AttachmentSystem.js`
 - `src/systems/PhysicsSystem.js`
 - `src/systems/FoodSystem.js`
+- `src/systems/FoodScentSystem.js`
+- `src/systems/ConnectionTreeSystem.js`
 - `src/systems/MapSystem.js`
 - `src/render/WorldRenderer.js`
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`
 
-## Phase 6 Summary
+## Phase 8 Summary
 
-Phase 6 is now functionally complete as a food-loop phase.
+Phase 8 is now functionally complete as a connection-tree + rewards phase.
 
 Built during this phase:
-- dedicated `FoodSystem`
-- finite food nodes with visible shrink/depletion
-- pickup gated by full containment within food nodes
-- meal increment on pickup
-- automatic carry-back behavior with reduced carrier speed
-- queen delivery to the queen's right side
-- salute beat after delivery
-- immediate spawning to the queen's left side
-- carrier exclusions from grasp polling
-- ridgeline-style carrier traversal across ant-top supports
-- debug focus that can lock onto active food carriers
-- future-facing spawn interface hook through `spawnAntBatch({ count, origin, genomeSource })`
+- direct support-path reward resolution from obtaining ant to ground/wall base
+- weighted contribution model for obtainer and support depth
+- packed food payloads with `acquisitionPacks`
+- repeated-grab accumulation on the same food item
+- stored genome snapshots on each packed contributor
+- queued queen-side spawning with timed delay between emitted offspring
+- pack-balanced spawn planning before weighted within-pack genome selection
+- inherited offspring brains and movement traits from queued genome snapshots
+- early map curation to push more climbing / support behavior
+- reorganized debug layout for easier live reading
 
 Automated verification completed:
-- `node --check` on modified Phase 6 files
+- `node --check` on modified Phase 8 files
 - headless `SimulationController` tick
 - `npm run spellcheck`
 
 User-observed behavior confirmed in-browser:
-- food pickup occurred
-- carrying ants showed the green carried-food marker
-- food nodes shrank on pickup
-- queen food and queen spawns increased on delivery
-- salute and spawn both occurred on successful return
-- the food interaction loop was observed end-to-end
+- food delivery and spawning still work after reward integration
+- reward-path context shows up in the tracked carrier display
+- payload packs appear to function without destabilizing the simulation
+- elevated foods shift the colony toward more climbing behavior
+- the reorganized debug layout is more readable during observation
 
 ## Notable Implementation Notes
 
 - Carrier return is still scripted rather than learned.
-- Spawning remains random for now, but the interface now has a clean hook for future genome/trait-based offspring generation.
-- Food scent was intentionally deferred so the raw pickup/carry/delivery loop could be validated first.
-- The next phase should focus on scent field representation, local sensor integration, and debug visibility before heavy tuning.
+- Food payloads now carry full packed genome snapshots, not only weighted ids.
+- Queen spawning is queue-driven and delayed, but still intentionally simple.
+- Spawn planning now divides offspring across acquisition packs before applying within-pack weighting.
+- The current direct support path is intentionally conservative and does not attempt to credit all structurally relevant nearby ants.
+
+## Warning Predictions For Later Analysis
+
+These are worth keeping on record as we move forward:
+- reward fairness may under-credit ants that mattered physically without appearing in the direct support path
+- queue readability may need stronger visuals if queen delays get longer
+- equal pack balancing may preserve diversity but flatten selection pressure more than expected
+- current brain/trait mutation strength may need retuning once longer-run lineage drift is observed
+- richer pack / spawn debug may be needed if parent-choice fairness becomes hard to judge
 
 ## Remaining Near-Term Work
 
 Most likely next step:
-- start Phase 7 planning around a food scent field and how it plugs into the local sensor model
+- start Phase 9 planning around queen-side food processing and reproduction behavior
 
-Possible Phase 6 follow-up polish if needed:
-- further refine carrier traversal across dense ridgelines
-- improve focus-ant behavior if multiple carriers become common
-- tune pickup frequency and queen delivery spacing after scent arrives
+Possible Phase 8 follow-up polish if needed:
+- richer pack-content visualization
+- better spawn-parent debug
+- longer-run observation of whether reward pressure is strong enough
 
 ## Session Close Summary
 
@@ -140,14 +151,15 @@ Built or completed:
 - repo spellcheck setup
 - Phase 5 physics constraints and polish
 - Phase 6 food loop
-- evolution-ready spawn interface hook
+- Phase 7 food scent map with wind drift
+- Phase 8 connection tree + rewards with packed food genomes and queued spawning
 
 Assumptions made:
-- scripting the return-to-queen behavior now is preferable to waiting for learned delivery
-- scent deserves its own dedicated next phase after the raw food loop is proven
-- offspring can remain random for now as long as the spawn path exposes a future genome handoff seam
+- a direct support path is preferable to early broad structural credit
+- repeated grabs should append packs and leave reproductive math to queen-side processing
+- equal pack division is a reasonable first-pass diversity-preserving rule
+- meaningful smell and reward effects will likely show up more strongly once longer-run evolution is active
 
 Remaining next:
-- begin Phase 7 planning
-- add the food scent map and neural input integration
-
+- begin Phase 9 planning
+- define queen-side eating / processing / reproduction policy more explicitly
