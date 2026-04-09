@@ -122,10 +122,10 @@ export const FOOD_TUNING = {
 
 export const FOOD_SCENT_TUNING = {
   gridCellSize: 24,
-  decayPerSecond: 0.3,
+  decayPerSecond: 0.25,
   diffusionRate: 0.18,
   emissionStrength: 1.2,
-  emissionRadius: 112,
+  emissionRadius: 122,
   coreRadiusRatio: 0.5,
   coreEdgeIntensity: 0.9,
   sampleClamp: 1,
