@@ -304,9 +304,10 @@ export class MapSystem {
       makeFood("food-0", 372, 424, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
       makeFood("food-1", 668, 302, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
       makeFood("food-2", 950, 198, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
-      makeFood("food-3", 208, this.ground.y - 18, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
+      makeFood("food-3", 208, 592, FOOD_TUNING.smallNodeRadius, 4),
       makeFood("food-4", 289, 490, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
       makeFood("food-5", 853, 236, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
+      makeFood("food-6", 258, 548, FOOD_TUNING.smallNodeRadius, 4),
     ];
     this.foodNodeById = new Map(this.foodNodes.map((foodNode) => [foodNode.id, foodNode]));
 
@@ -595,5 +596,6 @@ export class MapSystem {
     this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
   }
 }
+
 
 
