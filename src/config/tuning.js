@@ -125,7 +125,7 @@ export const FOOD_SCENT_TUNING = {
   decayPerSecond: 0.35,
   diffusionRate: 0.18,
   emissionStrength: 1.45,
-  emissionRadius: 140,
+  emissionRadius: 112,
   sampleClamp: 1,
   overlayMinAlpha: 0.04,
   overlayMaxAlpha: 0.3,
@@ -186,3 +186,4 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+

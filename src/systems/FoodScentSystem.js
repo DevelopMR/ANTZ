@@ -128,7 +128,8 @@ export class FoodScentSystem {
             continue;
           }
 
-          const falloff = 1 - distance / radius;
+          const normalizedDistance = distance / radius;
+          const falloff = Math.max(0, 1 - normalizedDistance * normalizedDistance);
           const emission = FOOD_SCENT_TUNING.emissionStrength * strengthScale * falloff * deltaTime;
           const index = this.#index(column, row);
           this.field[index] = clamp(this.field[index] + emission, 0, FOOD_SCENT_TUNING.sampleClamp);
@@ -155,4 +156,5 @@ export class FoodScentSystem {
     return top * (1 - ty) + bottom * ty;
   }
 }
+
 

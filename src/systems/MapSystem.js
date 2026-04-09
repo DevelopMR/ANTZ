@@ -265,6 +265,18 @@ function segmentCrossesBand(startX, endX, minX, maxX) {
   return segmentMax >= minX && segmentMin <= maxX;
 }
 
+function resolveWallBoundary(currentX, minX, maxX) {
+  if (currentX <= minX) {
+    return minX;
+  }
+
+  if (currentX >= maxX) {
+    return maxX;
+  }
+
+  return Math.abs(currentX - minX) <= Math.abs(currentX - maxX) ? minX : maxX;
+}
+
 export class MapSystem {
   constructor() {
     const groundTop = SIMULATION_TUNING.groundY + 8;
@@ -475,7 +487,7 @@ export class MapSystem {
       const crossesWall = segmentCrossesBand(currentX, resolvedX, minX, maxX);
 
       if (entersWall || crossesWall) {
-        resolvedX = ant.velocity.x >= 0 ? minX : maxX;
+        resolvedX = resolveWallBoundary(currentX, minX, maxX);
       }
     }
 
@@ -574,3 +586,4 @@ export class MapSystem {
     this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
   }
 }
+

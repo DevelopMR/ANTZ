@@ -64,7 +64,7 @@ export class SimulationController {
     for (let index = 0; index < count; index += 1) {
       const ant = this.#createAnt({
         x: origin.x - randomRange(this.random, FOOD_TUNING.spawnOffsetLeftMin, FOOD_TUNING.spawnOffsetLeftMax),
-        y: SIMULATION_TUNING.groundY + randomRange(this.random, 0, SIMULATION_TUNING.groundBandHeight * 0.35),
+        y: SIMULATION_TUNING.groundY,
       }, genomeSource);
       this.ants.push(ant);
     }
@@ -79,13 +79,11 @@ export class SimulationController {
     this.nextAntId = 0;
 
     for (let index = 0; index < SIMULATION_TUNING.antCount; index += 1) {
-      const row = index % 2;
       const xOffset = randomRange(this.random, -24, SIMULATION_TUNING.spawnWidth);
-      const groundOffset = row * 10 + randomRange(this.random, 0, SIMULATION_TUNING.groundBandHeight * 0.35);
 
       this.ants.push(this.#createAnt({
         x: this.queen.position.x + xOffset,
-        y: SIMULATION_TUNING.groundY + groundOffset,
+        y: SIMULATION_TUNING.groundY,
       }));
     }
   }
@@ -121,3 +119,4 @@ export class SimulationController {
     return ant;
   }
 }
+
