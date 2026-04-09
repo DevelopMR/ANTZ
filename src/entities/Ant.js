@@ -97,6 +97,8 @@ export class Ant {
       carrying: false,
       carriedAmount: 0,
       sourceNodeId: null,
+      carriedPayload: null,
+      rewardPathPreview: null,
       mealsEaten: 0,
       deliveryCount: 0,
       returnMode: "none",
@@ -120,3 +122,4 @@ export class Ant {
     };
   }
 }
+

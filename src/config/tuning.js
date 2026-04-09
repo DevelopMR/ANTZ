@@ -181,6 +181,12 @@ export const NEURAL_TUNING = {
   interactionOutputIndex: 3,
 };
 
+
+export const CONNECTION_TREE_TUNING = {
+  maxSupportDepth: 4,
+  obtainerWeight: 1,
+  supportDepthWeights: [0.45, 0.2, 0.08, 0.03],
+};
 export const MAP_TUNING = {
   groundColor: 0xd0ae79,
   wallColor: 0x9d7749,
@@ -188,5 +194,6 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+
 
 

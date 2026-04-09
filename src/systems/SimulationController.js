@@ -5,6 +5,7 @@ import { AttachmentSystem } from "./AttachmentSystem.js";
 import { PhysicsSystem } from "./PhysicsSystem.js";
 import { FoodSystem } from "./FoodSystem.js";
 import { FoodScentSystem } from "./FoodScentSystem.js";
+import { ConnectionTreeSystem } from "./ConnectionTreeSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
 import { ANT_TUNING, FOOD_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
@@ -25,6 +26,7 @@ export class SimulationController {
     this.physicsSystem = new PhysicsSystem(random);
     this.foodSystem = new FoodSystem(random);
     this.foodScentSystem = new FoodScentSystem();
+    this.connectionTreeSystem = new ConnectionTreeSystem();
     this.accumulator = 0;
     this.elapsedTime = 0;
     this.ants = [];
@@ -54,24 +56,41 @@ export class SimulationController {
       this.attachmentSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.physicsSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.foodSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
+      this.#processQueenSpawnQueue();
       const carryingAnt = this.ants.find((ant) => ant.carryingFood || ant.food?.carrying);
       this.debugFocusAntId = carryingAnt?.id ?? null;
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
     }
   }
 
-  spawnAntBatch({ count, origin, genomeSource = null }) {
+  spawnAntBatch({ count, origin, genomeSource = null, genomePicker = null }) {
     for (let index = 0; index < count; index += 1) {
+      const resolvedGenomeSource = genomePicker ? genomePicker(index) : genomeSource;
       const ant = this.#createAnt({
         x: origin.x - randomRange(this.random, FOOD_TUNING.spawnOffsetLeftMin, FOOD_TUNING.spawnOffsetLeftMax),
         y: SIMULATION_TUNING.groundY,
-      }, genomeSource);
+      }, resolvedGenomeSource);
       this.ants.push(ant);
     }
   }
 
   setFoodScentOverlayEnabled(enabled) {
     this.foodScentSystem.setOverlayEnabled(enabled);
+  }
+
+  #processQueenSpawnQueue() {
+    while (this.queen.pendingSpawnQueue.length > 0) {
+      const queuedSpawn = this.queen.pendingSpawnQueue.shift();
+      this.spawnAntBatch({
+        count: queuedSpawn.count,
+        origin: this.queen.position,
+        genomePicker: () => this.connectionTreeSystem.pickGenomeSource(queuedSpawn.payload, this.random),
+      });
+      this.queen.spawnedAntCount += queuedSpawn.count;
+      if (queuedSpawn.payload?.contributors?.length) {
+        this.queen.pendingGenomePool = queuedSpawn.payload.contributors.map((contributor) => ({ ...contributor }));
+      }
+    }
   }
 
   #spawnInitialAnts() {
@@ -119,4 +138,3 @@ export class SimulationController {
     return ant;
   }
 }
-

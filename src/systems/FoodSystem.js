@@ -8,13 +8,34 @@ function countActiveLegs(ant) {
   return ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
 }
 
+function clonePayload(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  return {
+    acquisitionCount: payload.acquisitionCount ?? 0,
+    contributors: (payload.contributors ?? []).map((contributor) => ({ ...contributor })),
+    latestPath: payload.latestPath
+      ? {
+          obtainerId: payload.latestPath.obtainerId,
+          baseType: payload.latestPath.baseType,
+          baseId: payload.latestPath.baseId,
+          contributors: (payload.latestPath.contributors ?? []).map((entry) => ({ ...entry })),
+        }
+      : null,
+  };
+}
+
 function clearCarriedFood(ant) {
   ant.food.carrying = false;
   ant.food.carriedAmount = 0;
   ant.food.sourceNodeId = null;
+  ant.food.carriedPayload = null;
   ant.food.returnMode = "none";
   ant.food.deliveryTargetX = 0;
   ant.food.deliveryTargetY = 0;
+  ant.food.rewardPathPreview = null;
   ant.carryingFood = false;
 }
 
@@ -35,15 +56,15 @@ export class FoodSystem {
       }
 
       if (ant.food.carrying) {
-        this.#attemptQueenDelivery(ant, queen, simulationController);
+        this.#attemptQueenDelivery(ant, queen);
         continue;
       }
 
-      this.#attemptFoodPickup(ant, mapSystem, queen, simulationController);
+      this.#attemptFoodPickup(ant, ants, mapSystem, queen, simulationController);
     }
   }
 
-  #attemptFoodPickup(ant, mapSystem, queen, simulationController) {
+  #attemptFoodPickup(ant, ants, mapSystem, queen, simulationController) {
     if (ant.carryingFood || ant.food.saluteTimer > 0) {
       return;
     }
@@ -66,21 +87,26 @@ export class FoodSystem {
     }
 
     const taken = mapSystem.takeFoodUnit(foodNode.id, FOOD_TUNING.carryUnitAmount);
-    if (taken <= 0) {
+    if ((taken?.amount ?? 0) <= 0) {
       return;
     }
 
+    const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
+    const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath);
+
     ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
     ant.food.carrying = true;
-    ant.food.carriedAmount = taken;
+    ant.food.carriedAmount = taken.amount;
     ant.food.sourceNodeId = foodNode.id;
+    ant.food.carriedPayload = clonePayload(mergedPayload);
+    ant.food.rewardPathPreview = clonePayload(mergedPayload)?.latestPath ?? null;
     ant.food.returnMode = "queen";
     ant.food.deliveryTargetX = queen.position.x + FOOD_TUNING.queenDeliveryOffsetX;
     ant.food.deliveryTargetY = queen.position.y;
     ant.carryingFood = true;
   }
 
-  #attemptQueenDelivery(ant, queen, simulationController) {
+  #attemptQueenDelivery(ant, queen) {
     const deliveryPoint = {
       x: queen.position.x + FOOD_TUNING.queenDeliveryOffsetX,
       y: queen.position.y,
@@ -107,13 +133,13 @@ export class FoodSystem {
     ant.food.lastDeliveredAmount = ant.food.carriedAmount;
     ant.food.saluteTimer = FOOD_TUNING.saluteDuration;
 
-    const spawnCount = this.#randomSpawnCount();
-    queen.spawnedAntCount += spawnCount;
-    simulationController.spawnAntBatch({
+    const spawnCount = this.#randomSpawnCount() * Math.max(1, ant.food.carriedAmount);
+    const queuedPayload = clonePayload(ant.food.carriedPayload);
+    queen.pendingSpawnQueue.push({
       count: spawnCount,
-      origin: queen.position,
-      genomeSource: null,
+      payload: queuedPayload,
     });
+    queen.pendingGenomePool = queuedPayload?.contributors?.map((contributor) => ({ ...contributor })) ?? [];
 
     clearCarriedFood(ant);
   }
@@ -124,7 +150,8 @@ export class FoodSystem {
       mapSystem.spawnDroppedFood(
         clamp(ant.position.x, 28, WORLD_WIDTH - 28),
         SIMULATION_TUNING.groundY - FOOD_TUNING.droppedFoodGroundOffsetY,
-        droppedAmount
+        droppedAmount,
+        clonePayload(ant.food.carriedPayload)
       );
       ant.food.lastDroppedAmount = droppedAmount;
     }
@@ -137,6 +164,3 @@ export class FoodSystem {
     return FOOD_TUNING.spawnOnFeedMin + Math.floor(this.random() * span);
   }
 }
-
-
-

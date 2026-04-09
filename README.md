@@ -124,7 +124,7 @@ Intended build sequence for the current implementation track:
 5. Physics constraints
 6. Food system
 7. Food scent map
-8. Connection tree + rewards
+8. Connection Tree + Rewards
 9. Queen + reproduction
 10. Traits + mutation
 11. Pheromone system
@@ -137,3 +137,4 @@ Intended build sequence for the current implementation track:
 This repository is being built phase-by-phase. The current code intentionally leaves hooks for future systems, but avoids implementing future mechanics too early.
 
 If you are contributing, use the repository design docs and architecture notes as the source of truth before extending systems.
+

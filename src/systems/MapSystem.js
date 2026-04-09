@@ -117,7 +117,7 @@ function makePeg(id, x, y, radius) {
   };
 }
 
-function makeFood(id, x, y, radius, tripCount) {
+function makeFood(id, x, y, radius, tripCount, rewardPayload = null) {
   return {
     id,
     type: "food",
@@ -129,6 +129,7 @@ function makeFood(id, x, y, radius, tripCount) {
     maxTrips: tripCount,
     remainingTrips: tripCount,
     available: tripCount > 0,
+    rewardPayload,
     climbable: false,
     occludesVision: false,
     color: MAP_TUNING.foodColor,
@@ -444,23 +445,31 @@ export class MapSystem {
   takeFoodUnit(foodId, amount = FOOD_TUNING.carryUnitAmount) {
     const foodNode = this.getFoodNodeById(foodId);
     if (!foodNode || !foodNode.available) {
-      return 0;
+      return { amount: 0, rewardPayload: null };
     }
 
     const taken = Math.min(amount, foodNode.remainingTrips);
+    const extractedPayload = taken > 0 ? foodNode.rewardPayload : null;
     foodNode.remainingTrips = Math.max(0, foodNode.remainingTrips - taken);
+    if (taken > 0) {
+      foodNode.rewardPayload = null;
+    }
     this.#updateFoodNodeRadius(foodNode);
     this.#rebuildStaticSensorIndex();
-    return taken;
+    return {
+      amount: taken,
+      rewardPayload: extractedPayload,
+    };
   }
 
-  spawnDroppedFood(x, y, tripCount = FOOD_TUNING.carryUnitAmount) {
+  spawnDroppedFood(x, y, tripCount = FOOD_TUNING.carryUnitAmount, rewardPayload = null) {
     const foodNode = makeFood(
       `dropped-food-${this.nextDroppedFoodId}`,
       clamp(x, 28, WORLD_WIDTH - 28),
       y,
       FOOD_TUNING.droppedFoodRadius,
-      tripCount
+      tripCount,
+      rewardPayload
     );
 
     this.nextDroppedFoodId += 1;
@@ -586,4 +595,5 @@ export class MapSystem {
     this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
   }
 }
+
 

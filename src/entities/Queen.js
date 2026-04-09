@@ -6,5 +6,7 @@ export class Queen {
     this.spawnedAntCount = 0;
     this.lastFedAmount = 0;
     this.lastFedTimer = 0;
+    this.pendingSpawnQueue = [];
+    this.pendingGenomePool = [];
   }
 }

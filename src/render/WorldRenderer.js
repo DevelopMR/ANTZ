@@ -124,6 +124,22 @@ function formatBrainDebug(ant, simulation) {
   lines.push(`legs ${activeLegCount}`);
   lines.push(`carry ${formatScalar(ant.food?.carriedAmount ?? 0)}`);
   lines.push(`mode ${ant.food?.returnMode ?? "none"}`);
+  const carriedPayload = ant.food?.carriedPayload;
+  if (carriedPayload) {
+    lines.push(`payload grabs ${carriedPayload.acquisitionCount ?? 0}`);
+    for (const contributor of carriedPayload.contributors.slice(0, 4)) {
+      lines.push(`reward ant-${contributor.antId} ${formatScalar(contributor.weight)}`);
+    }
+    if ((carriedPayload.contributors?.length ?? 0) > 4) {
+      lines.push(`reward +${carriedPayload.contributors.length - 4} more`);
+    }
+    if (carriedPayload.latestPath?.baseType) {
+      const baseLabel = carriedPayload.latestPath.baseId != null
+        ? `${carriedPayload.latestPath.baseType}-${carriedPayload.latestPath.baseId}`
+        : carriedPayload.latestPath.baseType;
+      lines.push(`reward base ${baseLabel}`);
+    }
+  }
   if ((ant.food?.saluteTimer ?? 0) > 0) {
     lines.push("saluting yes");
   }
@@ -134,6 +150,8 @@ function formatBrainDebug(ant, simulation) {
     lines.push(`impact ant ${ant.physics.lastImpactId}`);
   }
   lines.push(`queen food ${simulation?.queen?.foodReceived ?? 0}`);
+  lines.push(`queen queue ${simulation?.queen?.pendingSpawnQueue?.length ?? 0}`);
+  lines.push(`queen pool ${simulation?.queen?.pendingGenomePool?.length ?? 0}`);
   lines.push(`queen spawns ${simulation?.queen?.spawnedAntCount ?? 0}`);
   lines.push(`fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`);
 
@@ -560,4 +578,5 @@ export class WorldRenderer {
     }
   }
 }
+
 
