@@ -37,6 +37,14 @@ const BRAIN_TEXT_STYLE = {
   lineJoin: "round",
 };
 const LABEL_MARGIN = 8;
+const DEBUG_PANEL_LAYOUT = {
+  inputsX: 18,
+  outputsX: 170,
+  antX: 356,
+  topY: 51,
+  scenarioX: 18,
+  scenarioY: 299,
+};
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -92,11 +100,9 @@ function formatLegDebug(leg) {
   return `${leg.slot + 1} ${target}\nx${leg.stretchRatio.toFixed(2)}`;
 }
 
-function formatBrainDebug(ant, simulation) {
+function formatInputDebug(ant) {
   const inputs = ant.brainState?.inputs ?? [];
-  const outputs = ant.brainState?.outputs ?? [];
   const wedgeNames = SENSOR_TUNING.wedgeNames;
-  const activeLegCount = ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
   const lines = [
     `Tracked ant ${ant.id}`,
     "Inputs",
@@ -112,18 +118,33 @@ function formatBrainDebug(ant, simulation) {
 
   lines.push(`food scent ${formatScalar(inputs[12] ?? 0)}`);
   lines.push(`pheromone ${formatScalar(inputs[13] ?? 0)}`);
-  lines.push("Outputs");
-  lines.push(`xVel ${formatScalar(outputs[NEURAL_TUNING.xVelOutputIndex] ?? 0)}`);
-  lines.push(`yVel ${formatScalar(outputs[NEURAL_TUNING.yVelOutputIndex] ?? 0)}`);
-  lines.push(`grasp ${formatScalar(outputs[NEURAL_TUNING.graspOutputIndex] ?? 0)}`);
-  lines.push(`interact ${formatScalar(outputs[NEURAL_TUNING.interactionOutputIndex] ?? 0)}`);
-  lines.push(`intent grasp ${formatScalar(ant.brainState?.graspIntent ?? 0)}`);
-  lines.push(`intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`);
-  lines.push(`state ${ant.movement?.verticalState ?? "unknown"}`);
-  lines.push(`support ${ant.movement?.supportType ?? "unknown"}`);
-  lines.push(`legs ${activeLegCount}`);
-  lines.push(`carry ${formatScalar(ant.food?.carriedAmount ?? 0)}`);
-  lines.push(`mode ${ant.food?.returnMode ?? "none"}`);
+  return lines.join("\n");
+}
+
+function formatOutputDebug(ant) {
+  const outputs = ant.brainState?.outputs ?? [];
+  return [
+    "Outputs",
+    `xVel ${formatScalar(outputs[NEURAL_TUNING.xVelOutputIndex] ?? 0)}`,
+    `yVel ${formatScalar(outputs[NEURAL_TUNING.yVelOutputIndex] ?? 0)}`,
+    `grasp ${formatScalar(outputs[NEURAL_TUNING.graspOutputIndex] ?? 0)}`,
+    `interact ${formatScalar(outputs[NEURAL_TUNING.interactionOutputIndex] ?? 0)}`,
+    `intent grasp ${formatScalar(ant.brainState?.graspIntent ?? 0)}`,
+    `intent interact ${formatScalar(ant.brainState?.interaction ?? 0)}`,
+  ].join("\n");
+}
+
+function formatAntDebug(ant) {
+  const activeLegCount = ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
+  const lines = [
+    "Tracked Ant",
+    `state ${ant.movement?.verticalState ?? "unknown"}`,
+    `support ${ant.movement?.supportType ?? "unknown"}`,
+    `legs ${activeLegCount}`,
+    `carry ${formatScalar(ant.food?.carriedAmount ?? 0)}`,
+    `mode ${ant.food?.returnMode ?? "none"}`,
+  ];
+
   const carriedPayload = ant.food?.carriedPayload;
   if (carriedPayload) {
     lines.push(`payload grabs ${carriedPayload.acquisitionCount ?? 0}`);
@@ -141,6 +162,7 @@ function formatBrainDebug(ant, simulation) {
       lines.push(`reward base ${baseLabel}`);
     }
   }
+
   if ((ant.food?.saluteTimer ?? 0) > 0) {
     lines.push("saluting yes");
   }
@@ -150,15 +172,21 @@ function formatBrainDebug(ant, simulation) {
   if (ant.physics?.lastImpactId != null) {
     lines.push(`impact ant ${ant.physics.lastImpactId}`);
   }
-  lines.push(`queen food ${simulation?.queen?.foodReceived ?? 0}`);
-  lines.push(`queen queue ${simulation?.queen?.pendingSpawnQueue?.length ?? 0}`);
-  lines.push(`queen pool ${simulation?.queen?.pendingGenomePool?.length ?? 0}`);
-  lines.push(`queen pending ${simulation?.queen?.pendingSpawnCount ?? 0}`);
-  lines.push(`queen cooldown ${formatScalar(simulation?.queen?.spawnCooldown ?? 0)}`);
-  lines.push(`queen spawns ${simulation?.queen?.spawnedAntCount ?? 0}`);
-  lines.push(`fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`);
 
   return lines.join("\n");
+}
+
+function formatScenarioDebug(simulation) {
+  return [
+    "Scenario",
+    `queen food ${simulation?.queen?.foodReceived ?? 0}`,
+    `queen queue ${simulation?.queen?.pendingSpawnQueue?.length ?? 0}`,
+    `queen pool ${simulation?.queen?.pendingGenomePool?.length ?? 0}`,
+    `queen pending ${simulation?.queen?.pendingSpawnCount ?? 0}`,
+    `queen cooldown ${formatScalar(simulation?.queen?.spawnCooldown ?? 0)}`,
+    `queen spawns ${simulation?.queen?.spawnedAntCount ?? 0}`,
+    `fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`,
+  ].join("\n");
 }
 
 function clampLabelToWorld(label) {
@@ -201,7 +229,10 @@ export class WorldRenderer {
     this.sensorLabelLayer = null;
     this.sensorLabelTexts = [];
     this.legLabelTexts = [];
-    this.brainDebugText = null;
+    this.debugInputsText = null;
+    this.debugOutputsText = null;
+    this.debugAntText = null;
+    this.debugScenarioText = null;
     this.showFoodScentMap = false;
   }
 
@@ -409,9 +440,21 @@ export class WorldRenderer {
       return label;
     });
 
-    this.brainDebugText = new Text("", BRAIN_TEXT_STYLE);
-    this.brainDebugText.position.set(18, 18);
-    this.worldContainer.addChild(this.brainDebugText);
+    this.debugInputsText = new Text("", BRAIN_TEXT_STYLE);
+    this.debugInputsText.position.set(DEBUG_PANEL_LAYOUT.inputsX, DEBUG_PANEL_LAYOUT.topY);
+    this.worldContainer.addChild(this.debugInputsText);
+
+    this.debugOutputsText = new Text("", BRAIN_TEXT_STYLE);
+    this.debugOutputsText.position.set(DEBUG_PANEL_LAYOUT.outputsX, DEBUG_PANEL_LAYOUT.topY);
+    this.worldContainer.addChild(this.debugOutputsText);
+
+    this.debugAntText = new Text("", BRAIN_TEXT_STYLE);
+    this.debugAntText.position.set(DEBUG_PANEL_LAYOUT.antX, DEBUG_PANEL_LAYOUT.topY);
+    this.worldContainer.addChild(this.debugAntText);
+
+    this.debugScenarioText = new Text("", BRAIN_TEXT_STYLE);
+    this.debugScenarioText.position.set(DEBUG_PANEL_LAYOUT.scenarioX, DEBUG_PANEL_LAYOUT.scenarioY);
+    this.worldContainer.addChild(this.debugScenarioText);
   }
 
   #drawSensorDebug() {
@@ -430,8 +473,17 @@ export class WorldRenderer {
       for (const label of this.legLabelTexts) {
         label.visible = false;
       }
-      if (this.brainDebugText) {
-        this.brainDebugText.text = "";
+      if (this.debugInputsText) {
+        this.debugInputsText.text = "";
+      }
+      if (this.debugOutputsText) {
+        this.debugOutputsText.text = "";
+      }
+      if (this.debugAntText) {
+        this.debugAntText.text = "";
+      }
+      if (this.debugScenarioText) {
+        this.debugScenarioText.text = "";
       }
       return;
     }
@@ -522,8 +574,17 @@ export class WorldRenderer {
       label.visible = true;
     }
 
-    if (this.brainDebugText) {
-      this.brainDebugText.text = formatBrainDebug(ant, this.simulation);
+    if (this.debugInputsText) {
+      this.debugInputsText.text = formatInputDebug(ant);
+    }
+    if (this.debugOutputsText) {
+      this.debugOutputsText.text = formatOutputDebug(ant);
+    }
+    if (this.debugAntText) {
+      this.debugAntText.text = formatAntDebug(ant);
+    }
+    if (this.debugScenarioText) {
+      this.debugScenarioText.text = formatScenarioDebug(this.simulation);
     }
   }
 
@@ -581,7 +642,5 @@ export class WorldRenderer {
     }
   }
 }
-
-
 
 
