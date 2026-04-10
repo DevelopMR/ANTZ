@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 40,
+  antCount: 30,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -107,8 +107,8 @@ export const FOOD_TUNING = {
   queenDeliveryOffsetX: 28,
   queenDeliveryRadius: 18,
   saluteDuration: 0.5,
-  spawnOnFeedMin: 1,
-  spawnOnFeedMax: 3,
+  spawnOnFeedMin: 2,
+  spawnOnFeedMax: 6,
   queenMealInterval: 30,
   spawnQueueInterval: 3,
   spawnOffsetLeftMin: 18,
@@ -140,6 +140,11 @@ export const SEASON_TUNING = {
   randomShare: 0.4,
   fitnessCloneShare: 0.2,
   connectionTreeShare: 0.4,
+};
+
+export const MUTATION_TUNING = {
+  fitnessCloneMutationShare: 0.5,
+  seasonPackMutationShare: 0.5,
 };
 export const FOOD_SCENT_TUNING = {
   gridCellSize: 24,

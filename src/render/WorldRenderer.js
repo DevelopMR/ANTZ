@@ -163,6 +163,16 @@ function formatAntDebug(ant) {
     }
   }
 
+  if (ant.lineageSource?.sourceType) {
+    lines.push(`lineage ${ant.lineageSource.sourceType}`);
+    lines.push(`mutated ${ant.lineageSource.shouldMutate ? "yes" : "no"}`);
+    if (ant.lineageSource.antId != null) {
+      lines.push(`parent ant-${ant.lineageSource.antId}`);
+    }
+  } else {
+    lines.push("lineage random");
+  }
+
   if ((ant.food?.saluteTimer ?? 0) > 0) {
     lines.push("saluting yes");
   }

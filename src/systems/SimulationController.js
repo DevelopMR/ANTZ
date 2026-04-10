@@ -15,6 +15,7 @@ import {
   FITNESS_TUNING,
   FOOD_TUNING,
   LIFE_TUNING,
+  MUTATION_TUNING,
   NEURAL_TUNING,
   SEASON_TUNING,
   SIMULATION_TUNING,
@@ -88,6 +89,10 @@ function createSeasonState(index) {
     connectionTreePacks: [],
     spawnHistory: [],
   };
+}
+
+function clampCount(value, total) {
+  return Math.max(0, Math.min(total, Math.round(value)));
 }
 
 export class SimulationController {
@@ -247,11 +252,13 @@ export class SimulationController {
         sourceAntId: genomeSource.antId ?? null,
         packIndex: genomeSource.packIndex ?? null,
         via: genomeSource.sourceType ?? "meal-queue",
+        mutated: genomeSource.shouldMutate ?? false,
       });
       this.queen.spawnHistory.push({
         antId: spawnedAnt?.id ?? null,
         sourceAntId: genomeSource.antId ?? null,
         packIndex: genomeSource.packIndex ?? null,
+        mutated: genomeSource.shouldMutate ?? false,
       });
     } else {
       queuedSpawn.nextSpawnIndex = queuedSpawn.spawnPlan.length;
@@ -374,6 +381,7 @@ export class SimulationController {
         sourceType: "fitness-clone",
         antId: sourceAnt.id,
         genomeSnapshot: this.#snapshotGenomeFromAnt(sourceAnt),
+        shouldMutate: false,
       });
     }
 
@@ -386,8 +394,12 @@ export class SimulationController {
         ...genomeSource,
         sourceType: "season-pack",
         genomeSnapshot: cloneGenomeSnapshot(genomeSource.genomeSnapshot),
+        shouldMutate: false,
       });
     }
+
+    this.#assignMutationShare(generationSources, "fitness-clone", MUTATION_TUNING.fitnessCloneMutationShare);
+    this.#assignMutationShare(generationSources, "season-pack", MUTATION_TUNING.seasonPackMutationShare);
 
     while (generationSources.length < totalAnts) {
       generationSources.push(null);
@@ -417,7 +429,7 @@ export class SimulationController {
     const parentGenome = this.#resolveParentGenome(genomeSource);
     const movementProfile = {
       forwardBias: parentGenome?.traits
-        ? this.#mutateTrait(parentGenome.traits.forwardBias)
+        ? this.#mutateTrait(parentGenome.traits.forwardBias, genomeSource)
         : randomRange(this.random, 0.92, 1.08),
       initialDirection,
       groundY: position.y,
@@ -448,10 +460,12 @@ export class SimulationController {
         outputCount: NEURAL_TUNING.outputCount,
         outputActivations: ["tanh", "tanh", "sigmoid", "sigmoid"],
         layers: parentGenome.brainLayers,
-      }));
+      }), genomeSource);
     }
 
-    ant.lineageSource = genomeSource;
+    ant.lineageSource = genomeSource
+      ? { ...genomeSource, genomeSnapshot: undefined }
+      : null;
     ant.season.fitnessScore = this.#computeFitnessScore(ant);
     this.nextAntId += 1;
     return ant;
@@ -487,12 +501,38 @@ export class SimulationController {
     };
   }
 
-  #applyMutation(neuralNet) {
-    return neuralNet;
+  #applyMutation(neuralNet, genomeSource = null) {
+    if (!genomeSource?.shouldMutate) {
+      return neuralNet;
+    }
+
+    return neuralNet.mutate({
+      rate: CONNECTION_TREE_TUNING.brainMutationRate,
+      magnitude: CONNECTION_TREE_TUNING.brainMutationMagnitude,
+      random: this.random,
+    });
   }
 
-  #mutateTrait(value) {
-    return value;
+  #mutateTrait(value, genomeSource = null) {
+    if (!genomeSource?.shouldMutate) {
+      return value;
+    }
+
+    const nextValue = value + randomRange(this.random, -CONNECTION_TREE_TUNING.traitMutationRange, CONNECTION_TREE_TUNING.traitMutationRange);
+    return Math.max(0.4, Math.min(1.6, nextValue));
+  }
+
+  #assignMutationShare(generationSources, sourceType, mutationShare) {
+    const eligible = generationSources
+      .map((source, index) => ({ source, index }))
+      .filter(({ source }) => source?.sourceType === sourceType);
+
+    const targetCount = clampCount(eligible.length * mutationShare, eligible.length);
+    const shuffled = shuffleInPlace([...eligible], this.random);
+
+    for (let index = 0; index < shuffled.length; index += 1) {
+      shuffled[index].source.shouldMutate = index < targetCount;
+    }
   }
 
   #randomInitialLifespan() {
