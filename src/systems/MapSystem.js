@@ -308,6 +308,7 @@ export class MapSystem {
       makeFood("food-4", 289, 490, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
       makeFood("food-5", 853, 236, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
       makeFood("food-6", 258, 548, FOOD_TUNING.smallNodeRadius, 4),
+      makeFood("food-7", 558, 350, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
     ];
     this.foodNodeById = new Map(this.foodNodes.map((foodNode) => [foodNode.id, foodNode]));
 

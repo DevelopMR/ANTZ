@@ -376,10 +376,6 @@ export class PhysicsSystem {
   }
   #enforceWallExclusion(ants, mapSystem) {
     for (const ant of ants) {
-      if (ant.movement.verticalState === "falling") {
-        continue;
-      }
-
       for (const wall of mapSystem.walls) {
         const minX = wall.x - ANT_TUNING.collisionRadius - ANT_TUNING.wallSupportPadding;
         const maxX = wall.x + wall.width + ANT_TUNING.collisionRadius + ANT_TUNING.wallSupportPadding;

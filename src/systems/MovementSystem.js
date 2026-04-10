@@ -90,6 +90,11 @@ export class MovementSystem {
         return;
       }
 
+      if (!ant.attached && (supportAnt.attached || hasActiveLegs(supportAnt))) {
+        this.#startFall(ant, "intentional");
+        return;
+      }
+
       if (supportAnt.movement.verticalState === "falling") {
         this.#startFall(ant, supportAnt.movement.fallMode === "collapse" ? "collapse" : "intentional");
         return;
@@ -305,7 +310,11 @@ export class MovementSystem {
   }
 
   #resolveCarrySupport(ant, deltaTime, mapSystem, ants, antById) {
-    const supportCandidates = ants.filter((candidate) => candidate.id !== ant.id);
+    const supportCandidates = ants.filter((candidate) =>
+      candidate.id !== ant.id &&
+      !candidate.attached &&
+      !hasActiveLegs(candidate)
+    );
     const landingSurface = mapSystem.findLandingSurface(ant.position.x, ant.position.y - ANT_TUNING.supportSnapDistance, supportCandidates);
 
     if (!landingSurface) {
@@ -349,6 +358,13 @@ export class MovementSystem {
   #integrateFall(ant, deltaTime, mapSystem, ants, antById) {
     ant.velocity.x = clamp(ant.velocity.x, -ANT_TUNING.tumbleBounceSpeedX, ANT_TUNING.tumbleBounceSpeedX);
     ant.velocity.y = Math.min(ant.velocity.y + ANT_TUNING.gravity * deltaTime, ANT_TUNING.maxFallSpeed);
+
+    const currentX = ant.position.x;
+    const nextX = mapSystem.constrainHorizontalMovement(ant, currentX, currentX + ant.velocity.x * deltaTime);
+    if (nextX !== currentX + ant.velocity.x * deltaTime) {
+      ant.velocity.x *= 0.2;
+    }
+    ant.position.x = nextX;
 
     const currentY = ant.position.y;
     const nextY = currentY + ant.velocity.y * deltaTime;
@@ -444,6 +460,10 @@ export class MovementSystem {
       }
 
       if (candidate.movement.verticalState === "falling") {
+        continue;
+      }
+
+      if (candidate.attached || hasActiveLegs(candidate)) {
         continue;
       }
 
