@@ -146,19 +146,29 @@ function makeGraspingFrame(tension) {
 
 function makeDeadFrame() {
   return renderFrame((ctx) => {
-    drawSideBody(ctx, 0.1, 0.045, 0);
-    drawSideAntennae(ctx, 0, 0);
+    const head = { x: 16.2, y: 37.2, rx: 4.8, ry: 4.4, rot: 0 };
+    const thorax = { x: 27.4, y: 36.5, rx: 4.7, ry: 3.9, rot: -0.06 };
+    const abdomen = { x: 41.0, y: 35.9, rx: 8.8, ry: 5.5, rot: -0.05 };
 
-    drawLine(ctx, 20.7, 27.6, 16.4, 37.8, 1.55);
-    drawLine(ctx, 26.0, 27.7, 24.4, 39.7, 1.55);
-    drawLine(ctx, 33.2, 27.6, 40.1, 37.6, 1.55);
-    drawLine(ctx, 23.4, 27.6, 19.2, 38.7, 1.45);
-    drawLine(ctx, 29.5, 27.6, 29.8, 39.7, 1.45);
-    drawLine(ctx, 36.5, 27.6, 46.3, 38.0, 1.45);
+    drawEllipse(ctx, head.x, head.y, head.rx, head.ry, head.rot);
+    drawEllipse(ctx, thorax.x, thorax.y, thorax.rx, thorax.ry, thorax.rot);
+    drawEllipse(ctx, abdomen.x, abdomen.y, abdomen.rx, abdomen.ry, abdomen.rot);
+    drawBodyHighlight(ctx, head, thorax, abdomen);
+
+    drawLine(ctx, 12.1, 34.4, 7.3, 27.2, 1.35);
+    drawLine(ctx, 13.0, 36.0, 6.1, 33.4, 1.35);
+
+    drawLine(ctx, 21.0, 35.0, 16.7, 24.6, 1.55);
+    drawLine(ctx, 26.2, 35.2, 24.8, 23.0, 1.55);
+    drawLine(ctx, 33.1, 35.1, 39.5, 25.1, 1.55);
+    drawLine(ctx, 23.5, 36.1, 20.0, 25.8, 1.45);
+    drawLine(ctx, 29.2, 36.0, 30.0, 24.1, 1.45);
+    drawLine(ctx, 36.4, 35.8, 45.1, 27.0, 1.45);
   });
 }
 
 function buildFrames() {
+
   return {
     standing: [
       makeStandingFrame(-0.75),

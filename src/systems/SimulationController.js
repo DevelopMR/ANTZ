@@ -294,7 +294,7 @@ export class SimulationController {
     ant.brainState.yVel = 0;
     ant.brainState.graspIntent = 0;
     ant.brainState.interaction = 0;
-    ant.visualState = ant.movement.verticalState === "falling" ? "grasping" : "standing";
+    ant.visualState = "dead";
   }
 
   #completeSeasonAndRestart() {
