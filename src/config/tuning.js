@@ -109,7 +109,7 @@ export const FOOD_TUNING = {
   saluteDuration: 0.5,
   spawnOnFeedMin: 1,
   spawnOnFeedMax: 3,
-  queenMealInterval: 6,
+  queenMealInterval: 30,
   spawnQueueInterval: 3,
   spawnOffsetLeftMin: 18,
   spawnOffsetLeftMax: 68,
