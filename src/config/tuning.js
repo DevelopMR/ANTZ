@@ -134,6 +134,8 @@ export const FITNESS_TUNING = {
   mealWeight: 30,
   foodDeliveryWeight: 60,
   rewardContributionWeight: 45,
+  connectionTreeBaseReward: 1,
+  connectionTreeClimberMultiplier: 1.5,
 };
 
 export const SEASON_TUNING = {

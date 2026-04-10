@@ -107,6 +107,7 @@ export class SimulationController {
     this.foodSystem = new FoodSystem(random);
     this.foodScentSystem = new FoodScentSystem();
     this.connectionTreeSystem = new ConnectionTreeSystem();
+    this.foodScentOverlayEnabled = false;
     this.accumulator = 0;
     this.elapsedTime = 0;
     this.ants = [];
@@ -171,6 +172,7 @@ export class SimulationController {
   }
 
   setFoodScentOverlayEnabled(enabled) {
+    this.foodScentOverlayEnabled = enabled;
     this.foodScentSystem.setOverlayEnabled(enabled);
   }
 
@@ -311,6 +313,7 @@ export class SimulationController {
 
     this.mapSystem = new MapSystem();
     this.foodScentSystem = new FoodScentSystem();
+    this.foodScentSystem.setOverlayEnabled(this.foodScentOverlayEnabled);
     this.queen = new Queen(SIMULATION_TUNING.queenPosition);
     this.ants = [];
     this.nextAntId = 0;

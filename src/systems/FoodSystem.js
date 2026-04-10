@@ -1,4 +1,4 @@
-import { ANT_TUNING, FOOD_TUNING, LIFE_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
+import { ANT_TUNING, FITNESS_TUNING, FOOD_TUNING, LIFE_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -54,6 +54,23 @@ function clonePayload(payload) {
         }
       : null,
   };
+}
+
+function applyConnectionTreeReward(contributionPath, ants) {
+  const orderedContributors = [...(contributionPath?.contributors ?? [])]
+    .sort((left, right) => right.depth - left.depth);
+
+  let reward = FITNESS_TUNING.connectionTreeBaseReward;
+  for (const contributor of orderedContributors) {
+    const contributorAnt = ants.find((candidate) => candidate.id === contributor.antId);
+    if (!contributorAnt) {
+      reward *= FITNESS_TUNING.connectionTreeClimberMultiplier;
+      continue;
+    }
+
+    contributorAnt.season.rewardContribution += reward;
+    reward *= FITNESS_TUNING.connectionTreeClimberMultiplier;
+  }
 }
 
 function clearCarriedFood(ant) {
@@ -125,12 +142,7 @@ export class FoodSystem {
     const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
     const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath, ants);
 
-    for (const contributor of contributionPath.contributors) {
-      const contributorAnt = ants.find((candidate) => candidate.id === contributor.antId);
-      if (contributorAnt) {
-        contributorAnt.season.rewardContribution += contributor.weight;
-      }
-    }
+    applyConnectionTreeReward(contributionPath, ants);
 
     if (ant.attached || countActiveLegs(ant) > 0) {
       simulationController.attachmentSystem.releaseAntForFoodCarry(ant, ants);
@@ -138,6 +150,7 @@ export class FoodSystem {
 
     ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
     ant.season.mealsEaten += FOOD_TUNING.mealUnitAmount;
+    ant.life.lifespanRemaining = Math.max(ant.life.lifespanRemaining, ant.life.baseLifespanSeconds);
     ant.life.lifespanRemaining += LIFE_TUNING.mealRestoreSeconds;
     ant.food.carrying = true;
     ant.food.carriedAmount = taken.amount;
