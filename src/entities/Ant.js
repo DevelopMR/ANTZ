@@ -39,7 +39,6 @@ export class Ant {
     this.connectionIds = [];
     this.traits = {
       forwardBias: movementProfile.forwardBias,
-      turnResponsiveness: movementProfile.turnResponsiveness,
     };
     this.brain = new NeuralNet({
       inputCount: NEURAL_TUNING.inputCount,

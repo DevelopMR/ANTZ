@@ -419,9 +419,6 @@ export class SimulationController {
       forwardBias: parentGenome?.traits
         ? this.#mutateTrait(parentGenome.traits.forwardBias)
         : randomRange(this.random, 0.92, 1.08),
-      turnResponsiveness: parentGenome?.traits
-        ? this.#mutateTrait(parentGenome.traits.turnResponsiveness)
-        : randomRange(this.random, 0.85, 1.15),
       initialDirection,
       groundY: position.y,
       postureTimer: randomRange(
@@ -486,7 +483,6 @@ export class SimulationController {
       brainLayers: ant.brain.clone().layers,
       traits: {
         forwardBias: ant.traits.forwardBias,
-        turnResponsiveness: ant.traits.turnResponsiveness,
       },
     };
   }

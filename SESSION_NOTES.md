@@ -123,6 +123,7 @@ User-observed behavior confirmed in-browser:
 - Next-generation sourcing is already split into random / fitness / season-pack buckets.
 - Mutation paths are intentionally present but disabled; Phase 10 should turn them on selectively instead of rewriting reproduction again.
 - Renderer ant views now rebuild when a season reset swaps in a fresh ant array.
+- `turnResponsiveness` was removed after review because it no longer affected runtime behavior and only added misleading trait complexity.
 
 ## Warning Predictions For Later Analysis
 

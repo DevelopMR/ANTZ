@@ -22,7 +22,6 @@ function snapshotAntGenome(ant, contributor) {
       brainLayers: cloneBrainLayers(ant.brain?.layers ?? []),
       traits: {
         forwardBias: ant.traits.forwardBias,
-        turnResponsiveness: ant.traits.turnResponsiveness,
       },
     },
   };

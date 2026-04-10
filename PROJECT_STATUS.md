@@ -25,6 +25,7 @@ Phase 9 turned the reward pipeline into a real seasonal colony loop. The complet
 - kept mutation as explicit no-op hooks for the next phase rather than partially enabling it early
 - added renderer support for season stats and ant-view rebuilding across season resets
 - added a dedicated dead-ant icon for clearer lifecycle readability
+- removed `turnResponsiveness` after confirming it was an old unused concept rather than a live movement trait
 
 ## Verification
 Current checks passing:
