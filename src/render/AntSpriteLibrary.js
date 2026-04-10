@@ -144,6 +144,20 @@ function makeGraspingFrame(tension) {
   });
 }
 
+function makeDeadFrame() {
+  return renderFrame((ctx) => {
+    drawSideBody(ctx, 0.1, 0.045, 0);
+    drawSideAntennae(ctx, 0, 0);
+
+    drawLine(ctx, 20.7, 27.6, 16.4, 37.8, 1.55);
+    drawLine(ctx, 26.0, 27.7, 24.4, 39.7, 1.55);
+    drawLine(ctx, 33.2, 27.6, 40.1, 37.6, 1.55);
+    drawLine(ctx, 23.4, 27.6, 19.2, 38.7, 1.45);
+    drawLine(ctx, 29.5, 27.6, 29.8, 39.7, 1.45);
+    drawLine(ctx, 36.5, 27.6, 46.3, 38.0, 1.45);
+  });
+}
+
 function buildFrames() {
   return {
     standing: [
@@ -167,6 +181,9 @@ function buildFrames() {
       makeGraspingFrame(-0.55),
       makeGraspingFrame(0),
       makeGraspingFrame(0.55),
+    ],
+    dead: [
+      makeDeadFrame(),
     ],
   };
 }

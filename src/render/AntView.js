@@ -25,9 +25,11 @@ export class AntView {
     }
 
     const sizeScale = this.ant.visualState === "grasping" ? 0.6 : 0.75;
-    const targetRotation = this.ant.movement?.verticalState === "falling"
-      ? this.ant.facing * (Math.PI * 0.42)
-      : 0;
+    const targetRotation = this.ant.visualState === "dead"
+      ? Math.PI
+      : this.ant.movement?.verticalState === "falling"
+        ? this.ant.facing * (Math.PI * 0.42)
+        : 0;
 
     if (this.ant.facing !== this.lastFacing || sizeScale !== this.lastScale) {
       this.sprite.scale.set(-this.ant.facing * sizeScale, sizeScale);
