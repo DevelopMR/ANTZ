@@ -160,7 +160,7 @@ export class SimulationController {
     for (let index = 0; index < count; index += 1) {
       const resolvedGenomeSource = genomePicker ? genomePicker(index) : genomeSource;
       const ant = this.#createAnt({
-        x: origin.x - randomRange(this.random, FOOD_TUNING.spawnOffsetLeftMin, FOOD_TUNING.spawnOffsetLeftMax),
+        x: origin.x + randomRange(this.random, FOOD_TUNING.spawnOffsetRightMin, FOOD_TUNING.spawnOffsetRightMax),
         y: SIMULATION_TUNING.groundY,
       }, resolvedGenomeSource);
       this.ants.push(ant);
