@@ -11,14 +11,15 @@ Primary goals covered across this session:
 - complete Phase 6 food loop
 - complete Phase 7 food scent map
 - complete Phase 8 connection tree + rewards
-- preserve enough context to resume cleanly into queen/reproduction work
+- complete Phase 9 queen / reproduction / season lifecycle
+- preserve enough context to resume cleanly into traits + mutation work
 
 ## Project Snapshot
 
-- Repository: `d:\dev\ANTZ`
+- Repository: `d:devANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
-- Current documented phase: `Phase 8 - Connection Tree + Rewards Complete`
-- Next intended phase: `Phase 9 - Queen and Reproduction`
+- Current documented phase: `Phase 9 - Queen and Reproduction Complete`
+- Next intended phase: `Phase 10 - Traits + Mutation`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -65,7 +66,7 @@ Current verification state:
 - `gh:status` works and GitHub auth is configured
 - repo spellcheck passes
 - Phase 5 smoke suite passes
-- headless Phase 8 simulation ticks pass
+- headless Phase 9 simulation ticks and season rollover checks pass
 
 ## Current Codebase State
 
@@ -89,60 +90,58 @@ Important current files and modules:
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`
 
-## Phase 8 Summary
+## Phase 9 Summary
 
-Phase 8 is now functionally complete as a connection-tree + rewards phase.
+Phase 9 is now functionally complete as the queen / reproduction / season-lifecycle phase.
 
 Built during this phase:
-- direct support-path reward resolution from obtaining ant to ground/wall base
-- weighted contribution model for obtainer and support depth
-- packed food payloads with `acquisitionPacks`
-- repeated-grab accumulation on the same food item
-- stored genome snapshots on each packed contributor
-- queued queen-side spawning with timed delay between emitted offspring
-- pack-balanced spawn planning before weighted within-pack genome selection
-- inherited offspring brains and movement traits from queued genome snapshots
-- early map curation to push more climbing / support behavior
-- reorganized debug layout for easier live reading
+- queen meal FIFO separate from direct delivery and separate from delayed spawn emission
+- ant lifespan with +/- variance, uncapped meal healing, death, and season fitness bookkeeping
+- season end when all worker ants die
+- season archives of delivered food payloads and packed connection-tree sets
+- next-generation construction with 40% random, 20% fitness-clone, and 40% season-pack sourcing
+- explicit no-op mutation hooks so Phase 10 can turn mutation on cleanly
+- scenario debug for season, alive/dead counts, queen meal queue, and queen timing
+- dedicated dead-ant sprite aligned to ground instead of ad hoc rotation tricks
 
 Automated verification completed:
-- `node --check` on modified Phase 8 files
-- headless `SimulationController` tick
+- `node --check` on modified Phase 9 files
+- headless `SimulationController` runs for food delivery, queen processing, and season rollover
 - `npm run spellcheck`
 
 User-observed behavior confirmed in-browser:
-- food delivery and spawning still work after reward integration
-- reward-path context shows up in the tracked carrier display
-- payload packs appear to function without destabilizing the simulation
-- elevated foods shift the colony toward more climbing behavior
-- the reorganized debug layout is more readable during observation
+- queen meal processing feels stable over long observation
+- food delivery, healing, and delayed spawning all continue working
+- colonies now survive, die out, and restart across many seasons
+- some early selection effects already appear visible even before true mutation is enabled
+- dead-ant icon works cleanly in the live display
 
 ## Notable Implementation Notes
 
-- Carrier return is still scripted rather than learned.
-- Food payloads now carry full packed genome snapshots, not only weighted ids.
-- Queen spawning is queue-driven and delayed, but still intentionally simple.
-- Spawn planning now divides offspring across acquisition packs before applying within-pack weighting.
-- The current direct support path is intentionally conservative and does not attempt to credit all structurally relevant nearby ants.
+- The queen now tracks delivered food, eaten food, meal queue, spawn queue, and spawn history separately.
+- Delivered food payloads are archived compactly for season-to-season reuse rather than storing a full ant-by-ant replay.
+- Next-generation sourcing is already split into random / fitness / season-pack buckets.
+- Mutation paths are intentionally present but disabled; Phase 10 should turn them on selectively instead of rewriting reproduction again.
+- Renderer ant views now rebuild when a season reset swaps in a fresh ant array.
 
 ## Warning Predictions For Later Analysis
 
 These are worth keeping on record as we move forward:
-- reward fairness may under-credit ants that mattered physically without appearing in the direct support path
-- queue readability may need stronger visuals if queen delays get longer
-- equal pack balancing may preserve diversity but flatten selection pressure more than expected
-- current brain/trait mutation strength may need retuning once longer-run lineage drift is observed
-- richer pack / spawn debug may be needed if parent-choice fairness becomes hard to judge
+- current fitness scoring may over-reward long-lived ants if food access becomes sparse
+- direct support-path credit may still miss important side-support contributors
+- the 40/20/40 generation split may need rebalancing once mutation pressure starts changing colony character
+- mutation strength that is too high could easily erase the tower/food behaviors already emerging
+- richer spawn-lineage debug may be needed once we start asking whether mutation and selection are fair
 
 ## Remaining Near-Term Work
 
 Most likely next step:
-- start Phase 9 planning around queen-side food processing and reproduction behavior
+- start Phase 10 planning around traits and selective mutation
 
-Possible Phase 8 follow-up polish if needed:
-- richer pack-content visualization
-- better spawn-parent debug
-- longer-run observation of whether reward pressure is strong enough
+Possible Phase 9 follow-up polish if needed:
+- stronger queen queue / meal visualization
+- richer lineage / offspring debug
+- more expressive season transition presentation later
 
 ## Session Close Summary
 
@@ -153,13 +152,15 @@ Built or completed:
 - Phase 6 food loop
 - Phase 7 food scent map with wind drift
 - Phase 8 connection tree + rewards with packed food genomes and queued spawning
+- Phase 9 queen / reproduction / season lifecycle with death and rollover
 
 Assumptions made:
-- a direct support path is preferable to early broad structural credit
-- repeated grabs should append packs and leave reproductive math to queen-side processing
-- equal pack division is a reasonable first-pass diversity-preserving rule
-- meaningful smell and reward effects will likely show up more strongly once longer-run evolution is active
+- compact season payload archives are preferable to storing full colony histories
+- mutation should remain off in Phase 9 even though the hooks are already in place
+- a dedicated dead sprite is better than special render rotation logic
+- current seasonal selection is worth validating before broadening the trait set
 
 Remaining next:
-- begin Phase 9 planning
-- define queen-side eating / processing / reproduction policy more explicitly
+- begin Phase 10 planning
+- define the first mutation-enabled offspring rules
+- decide exactly which traits are inherited and mutated in the first pass

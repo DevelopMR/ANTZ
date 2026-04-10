@@ -8,7 +8,7 @@ The long-term fantasy is a side-view ant-farm world where ants learn to cooperat
 
 ## Current Status
 
-The project has completed Phase 8:
+The project has completed Phase 9:
 - side-view ant presentation and modular PixiJS rendering
 - fixed world-clock local sensing with ray-driven wedge aggregation
 - per-ant feedforward neural nets with explicit sensor-to-brain wiring
@@ -18,16 +18,15 @@ The project has completed Phase 8:
 - food scent field with diffusion, decay, and wind drift
 - direct support-path reward tracing for food acquisition
 - packed food genome payloads with repeat-grab accumulation
-- queue-driven queen spawning with pack-balanced offspring planning
-- inherited offspring brains and movement traits from queued genome snapshots
-- reorganized tracked-ant debug for inputs, outputs, ant state, and scenario stats
+- queen meal FIFO, delayed food consumption, delayed spawning, and season rollover
+- inherited offspring sourcing from random, fitness-clone, and season-pack buckets
+- dead-ant visual state and season/debug tracking
 
 Not implemented yet:
-- final queen progression / reproduction policy
-- broader structural credit beyond the direct support path
-- richer trait system beyond current inherited movement hooks
+- actual mutation effects on offspring
+- broader trait system beyond current inherited movement hooks
 - pheromone map simulation
-- death / recycling
+- dead-ant recycling
 - map progression and late-game polish
 
 ## Goals
@@ -83,12 +82,13 @@ Ant perception is currently shaped around local-only inputs such as:
 - nondirectional local food scent scalar
 - nondirectional pheromone scalar
 
-Phase 8 completed the first real reward pipeline:
+Phase 9 completed the first full season loop:
 - ants now earn structural reward through the direct support path beneath a successful food grab
 - that reward is packed onto the food as one or more genome sets
 - repeated grabs append additional acquisition packs instead of overwriting earlier ones
-- the queen now consumes queued food rewards over time instead of spawning everything instantly
-- offspring are selected from those packed genome sets and inherit mutated brain/trait snapshots
+- the queen now consumes queued food meals FIFO and emits offspring over time
+- ants age, heal from food, die, and trigger season rollover when the colony is gone
+- the next season is rebuilt from random ants, top-fitness clones, and season connection-tree packs
 
 ## Project Structure
 
@@ -128,7 +128,7 @@ Intended build sequence for the current implementation track:
 7. Food scent map
 8. Connection Tree + Rewards
 9. Queen and Reproduction
-10. Traits + mutation
+10. Traits + Mutation
 11. Pheromone system
 12. Death + recycling
 13. Map progression
