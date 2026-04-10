@@ -109,6 +109,7 @@ export const FOOD_TUNING = {
   saluteDuration: 0.5,
   spawnOnFeedMin: 1,
   spawnOnFeedMax: 3,
+  queenMealInterval: 6,
   spawnQueueInterval: 3,
   spawnOffsetLeftMin: 18,
   spawnOffsetLeftMax: 68,
@@ -121,6 +122,25 @@ export const FOOD_TUNING = {
   minimumFoodRadiusRatio: 0.42,
 };
 
+
+export const LIFE_TUNING = {
+  baseLifespanSeconds: 90,
+  lifespanVarianceRatio: 0.4,
+  mealRestoreSeconds: 90,
+};
+
+export const FITNESS_TUNING = {
+  ageWeight: 1,
+  mealWeight: 30,
+  foodDeliveryWeight: 60,
+  rewardContributionWeight: 45,
+};
+
+export const SEASON_TUNING = {
+  randomShare: 0.4,
+  fitnessCloneShare: 0.2,
+  connectionTreeShare: 0.4,
+};
 export const FOOD_SCENT_TUNING = {
   gridCellSize: 24,
   decayPerSecond: 0.25,
@@ -198,6 +218,7 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
+
 
 
 

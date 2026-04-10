@@ -177,12 +177,21 @@ function formatAntDebug(ant) {
 }
 
 function formatScenarioDebug(simulation) {
+  const livingAnts = simulation?.ants?.filter((ant) => ant.state === "alive").length ?? 0;
+  const deadAnts = simulation?.ants?.filter((ant) => ant.state === "dead").length ?? 0;
   return [
     "Scenario",
+    `season ${simulation?.currentSeason?.index ?? 1}`,
+    `season time ${Math.floor(simulation?.currentSeason?.elapsedSeconds ?? 0)}s`,
+    `alive ants ${livingAnts}`,
+    `dead ants ${deadAnts}`,
+    `queen delivered ${simulation?.queen?.foodDelivered ?? 0}`,
     `queen food ${simulation?.queen?.foodReceived ?? 0}`,
+    `queen meals ${simulation?.queen?.mealQueue?.length ?? 0}`,
     `queen queue ${simulation?.queen?.pendingSpawnQueue?.length ?? 0}`,
     `queen pool ${simulation?.queen?.pendingGenomePool?.length ?? 0}`,
     `queen pending ${simulation?.queen?.pendingSpawnCount ?? 0}`,
+    `queen meal cd ${formatScalar(simulation?.queen?.mealCooldown ?? 0)}`,
     `queen cooldown ${formatScalar(simulation?.queen?.spawnCooldown ?? 0)}`,
     `queen spawns ${simulation?.queen?.spawnedAntCount ?? 0}`,
     `fallen ants ${simulation?.movementSystem?.totalFalls ?? 0}`,
@@ -633,6 +642,17 @@ export class WorldRenderer {
   }
 
   #syncAntViews() {
+    const needsRebuild =
+      this.antViews.length !== this.simulation.ants.length ||
+      this.antViews.some((antView, index) => antView.ant !== this.simulation.ants[index]);
+
+    if (needsRebuild) {
+      for (const antView of this.antViews) {
+        this.antLayer.removeChild(antView.sprite);
+      }
+      this.antViews = [];
+    }
+
     while (this.antViews.length < this.simulation.ants.length) {
       const ant = this.simulation.ants[this.antViews.length];
       const antView = new AntView(ant, this.antSpriteLibrary);

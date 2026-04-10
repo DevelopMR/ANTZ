@@ -9,11 +9,85 @@ import { FoodScentSystem } from "./FoodScentSystem.js";
 import { ConnectionTreeSystem } from "./ConnectionTreeSystem.js";
 import { Ant } from "../entities/Ant.js";
 import { Queen } from "../entities/Queen.js";
-import { ANT_TUNING, CONNECTION_TREE_TUNING, FOOD_TUNING, NEURAL_TUNING, SIMULATION_TUNING } from "../config/tuning.js";
+import {
+  ANT_TUNING,
+  CONNECTION_TREE_TUNING,
+  FITNESS_TUNING,
+  FOOD_TUNING,
+  LIFE_TUNING,
+  NEURAL_TUNING,
+  SEASON_TUNING,
+  SIMULATION_TUNING,
+} from "../config/tuning.js";
 import { MovementSystem } from "./MovementSystem.js";
 
 function randomRange(random, min, max) {
   return min + (max - min) * random();
+}
+
+function shuffleInPlace(values, random) {
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+  }
+  return values;
+}
+
+function cloneGenomeSnapshot(genomeSnapshot) {
+  if (!genomeSnapshot) {
+    return null;
+  }
+
+  return {
+    brainLayers: (genomeSnapshot.brainLayers ?? []).map((layer) => ({
+      activation: layer.activation,
+      weights: layer.weights.map((row) => [...row]),
+      biases: [...layer.biases],
+    })),
+    traits: { ...genomeSnapshot.traits },
+  };
+}
+
+function clonePayload(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  return {
+    acquisitionCount: payload.acquisitionCount ?? 0,
+    acquisitionPacks: (payload.acquisitionPacks ?? []).map((pack) => ({
+      packIndex: pack.packIndex,
+      obtainerId: pack.obtainerId,
+      baseType: pack.baseType,
+      baseId: pack.baseId,
+      contributors: (pack.contributors ?? []).map((contributor) => ({
+        antId: contributor.antId,
+        weight: contributor.weight,
+        role: contributor.role,
+        depth: contributor.depth,
+        genomeSnapshot: cloneGenomeSnapshot(contributor.genomeSnapshot),
+      })),
+    })),
+    contributors: (payload.contributors ?? []).map((contributor) => ({ ...contributor })),
+    latestPath: payload.latestPath
+      ? {
+          obtainerId: payload.latestPath.obtainerId,
+          baseType: payload.latestPath.baseType,
+          baseId: payload.latestPath.baseId,
+          contributors: (payload.latestPath.contributors ?? []).map((entry) => ({ ...entry })),
+        }
+      : null,
+  };
+}
+
+function createSeasonState(index) {
+  return {
+    index,
+    elapsedSeconds: 0,
+    deliveredPayloads: [],
+    connectionTreePacks: [],
+    spawnHistory: [],
+  };
 }
 
 export class SimulationController {
@@ -33,6 +107,8 @@ export class SimulationController {
     this.ants = [];
     this.nextAntId = 0;
     this.debugFocusAntId = null;
+    this.seasonHistory = [];
+    this.currentSeason = createSeasonState(1);
     this.queen = new Queen(SIMULATION_TUNING.queenPosition);
     this.goal = {
       position: { ...SIMULATION_TUNING.exitPosition },
@@ -40,8 +116,8 @@ export class SimulationController {
 
     this.#spawnInitialAnts();
     this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
-    this.sensorSystem.update(this.ants, this.mapSystem, this.queen, this.foodScentSystem);
-    this.brainSystem.update(this.ants);
+    this.sensorSystem.update(this.#getLivingAnts(), this.mapSystem, this.queen, this.foodScentSystem);
+    this.brainSystem.update(this.#getLivingAnts());
   }
 
   update(deltaTime) {
@@ -50,21 +126,32 @@ export class SimulationController {
     this.elapsedTime += safeDelta;
 
     while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
+      this.currentSeason.elapsedSeconds += SIMULATION_TUNING.fixedTimeStep;
+      const livingAnts = this.#getLivingAnts();
+      const movableAnts = this.#getMovableAnts();
+
       this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
-      this.sensorSystem.update(this.ants, this.mapSystem, this.queen, this.foodScentSystem);
-      this.brainSystem.update(this.ants);
-      this.movementSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
-      this.attachmentSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
-      this.physicsSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
-      this.foodSystem.update(this.ants, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
-      this.#processQueenSpawnQueue(SIMULATION_TUNING.fixedTimeStep);
-      const carryingAnt = this.ants.find((ant) => ant.carryingFood || ant.food?.carrying);
-      this.debugFocusAntId = carryingAnt?.id ?? null;
+      this.sensorSystem.update(livingAnts, this.mapSystem, this.queen, this.foodScentSystem);
+      this.brainSystem.update(livingAnts);
+      this.movementSystem.update(movableAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.attachmentSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.physicsSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.foodSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
+      this.#processQueenLifecycle(SIMULATION_TUNING.fixedTimeStep);
+      this.#updateLifeCycle(SIMULATION_TUNING.fixedTimeStep);
+      this.#refreshDebugFocus();
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
+
+      if (this.#getLivingAnts().length === 0) {
+        this.#completeSeasonAndRestart();
+        break;
+      }
     }
   }
 
   spawnAntBatch({ count, origin, genomeSource = null, genomePicker = null }) {
+    const spawnedAnts = [];
+
     for (let index = 0; index < count; index += 1) {
       const resolvedGenomeSource = genomePicker ? genomePicker(index) : genomeSource;
       const ant = this.#createAnt({
@@ -72,15 +159,56 @@ export class SimulationController {
         y: SIMULATION_TUNING.groundY,
       }, resolvedGenomeSource);
       this.ants.push(ant);
+      spawnedAnts.push(ant);
     }
+
+    return spawnedAnts;
   }
 
   setFoodScentOverlayEnabled(enabled) {
     this.foodScentSystem.setOverlayEnabled(enabled);
   }
 
-  #processQueenSpawnQueue(deltaTime) {
+  recordSeasonMealPayload(payload) {
+    if (!payload) {
+      return;
+    }
+
+    const clonedPayload = clonePayload(payload);
+    this.currentSeason.deliveredPayloads.push(clonedPayload);
+    for (const pack of clonedPayload.acquisitionPacks ?? []) {
+      this.currentSeason.connectionTreePacks.push({
+        packIndex: pack.packIndex,
+        obtainerId: pack.obtainerId,
+        baseType: pack.baseType,
+        baseId: pack.baseId,
+        contributors: (pack.contributors ?? []).map((contributor) => ({
+          antId: contributor.antId,
+          weight: contributor.weight,
+          role: contributor.role,
+          depth: contributor.depth,
+          genomeSnapshot: cloneGenomeSnapshot(contributor.genomeSnapshot),
+        })),
+      });
+    }
+  }
+
+  #processQueenLifecycle(deltaTime) {
     this.queen.spawnCooldown = Math.max(0, this.queen.spawnCooldown - deltaTime);
+
+    if (this.queen.mealCooldown <= 0 && this.queen.mealQueue.length > 0) {
+      const meal = this.queen.mealQueue.shift();
+      this.queen.foodReceived += meal.amount;
+      this.queen.lastFedAmount = meal.amount;
+      this.queen.lastFedTimer = FOOD_TUNING.saluteDuration;
+      this.queen.mealCooldown = FOOD_TUNING.queenMealInterval;
+      this.queen.pendingSpawnQueue.push({
+        count: meal.spawnCount,
+        payload: clonePayload(meal.payload),
+        spawnPlan: null,
+        nextSpawnIndex: 0,
+      });
+    }
 
     while (this.queen.pendingSpawnQueue.length > 0 && !this.queen.pendingSpawnQueue[0].spawnPlan) {
       const queuedSpawn = this.queen.pendingSpawnQueue[0];
@@ -104,7 +232,7 @@ export class SimulationController {
     const queuedSpawn = this.queen.pendingSpawnQueue[0];
     const genomeSource = queuedSpawn.spawnPlan[queuedSpawn.nextSpawnIndex] ?? null;
     if (genomeSource) {
-      this.spawnAntBatch({
+      const [spawnedAnt] = this.spawnAntBatch({
         count: 1,
         origin: this.queen.position,
         genomeSource,
@@ -113,6 +241,18 @@ export class SimulationController {
       this.queen.spawnCooldown = FOOD_TUNING.spawnQueueInterval;
       queuedSpawn.nextSpawnIndex += 1;
       this.queen.pendingSpawnCount = Math.max(0, this.queen.pendingSpawnCount - 1);
+      this.currentSeason.spawnHistory.push({
+        seasonIndex: this.currentSeason.index,
+        antId: spawnedAnt?.id ?? null,
+        sourceAntId: genomeSource.antId ?? null,
+        packIndex: genomeSource.packIndex ?? null,
+        via: genomeSource.sourceType ?? "meal-queue",
+      });
+      this.queen.spawnHistory.push({
+        antId: spawnedAnt?.id ?? null,
+        sourceAntId: genomeSource.antId ?? null,
+        packIndex: genomeSource.packIndex ?? null,
+      });
     } else {
       queuedSpawn.nextSpawnIndex = queuedSpawn.spawnPlan.length;
     }
@@ -126,17 +266,148 @@ export class SimulationController {
     }
   }
 
-  #spawnInitialAnts() {
+  #updateLifeCycle(deltaTime) {
+    for (const ant of this.#getLivingAnts()) {
+      ant.life.ageSeconds += deltaTime;
+      ant.life.lifespanRemaining -= deltaTime;
+      ant.season.fitnessScore = this.#computeFitnessScore(ant);
+
+      if (ant.life.lifespanRemaining <= 0) {
+        this.#handleAntDeath(ant);
+      }
+    }
+  }
+
+  #handleAntDeath(ant) {
+    if (ant.state === "dead") {
+      return;
+    }
+
+    if (ant.carryingFood || ant.food?.carrying) {
+      this.foodSystem.dropCarriedFood(ant, this.mapSystem);
+    }
+
+    this.attachmentSystem.releaseAntForDeath(ant, this.ants);
+    ant.state = "dead";
+    ant.life.deadAtSeasonTime = this.currentSeason.elapsedSeconds;
+    ant.brainState.xVel = 0;
+    ant.brainState.yVel = 0;
+    ant.brainState.graspIntent = 0;
+    ant.brainState.interaction = 0;
+    ant.visualState = ant.movement.verticalState === "falling" ? "grasping" : "standing";
+  }
+
+  #completeSeasonAndRestart() {
+    const finishedSeason = this.#buildSeasonSummary();
+    this.seasonHistory.push(finishedSeason);
+    const nextGenerationSources = this.#buildNextGenerationSources(finishedSeason);
+
+    this.mapSystem = new MapSystem();
+    this.foodScentSystem = new FoodScentSystem();
+    this.queen = new Queen(SIMULATION_TUNING.queenPosition);
+    this.ants = [];
+    this.nextAntId = 0;
+    this.debugFocusAntId = null;
+    this.currentSeason = createSeasonState(finishedSeason.index + 1);
+    this.movementSystem.totalFalls = 0;
+    this.#spawnInitialAnts(nextGenerationSources);
+    this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
+    this.sensorSystem.update(this.#getLivingAnts(), this.mapSystem, this.queen, this.foodScentSystem);
+    this.brainSystem.update(this.#getLivingAnts());
+  }
+
+  #buildSeasonSummary() {
+    const ants = [...this.ants];
+    for (const ant of ants) {
+      ant.season.fitnessScore = this.#computeFitnessScore(ant);
+    }
+
+    return {
+      index: this.currentSeason.index,
+      elapsedSeconds: this.currentSeason.elapsedSeconds,
+      ants,
+      deliveredPayloads: this.currentSeason.deliveredPayloads.map((payload) => clonePayload(payload)),
+      connectionTreePacks: this.currentSeason.connectionTreePacks.map((pack) => ({
+        packIndex: pack.packIndex,
+        obtainerId: pack.obtainerId,
+        baseType: pack.baseType,
+        baseId: pack.baseId,
+        contributors: (pack.contributors ?? []).map((contributor) => ({
+          antId: contributor.antId,
+          weight: contributor.weight,
+          role: contributor.role,
+          depth: contributor.depth,
+          genomeSnapshot: cloneGenomeSnapshot(contributor.genomeSnapshot),
+        })),
+      })),
+      spawnHistory: [...this.currentSeason.spawnHistory],
+      topFitness: [...ants]
+        .sort((left, right) => right.season.fitnessScore - left.season.fitnessScore)
+        .slice(0, 10)
+        .map((ant) => ({ id: ant.id, fitness: ant.season.fitnessScore })),
+    };
+  }
+
+  #buildNextGenerationSources(seasonSummary) {
+    const totalAnts = SIMULATION_TUNING.antCount;
+    const randomCount = Math.round(totalAnts * SEASON_TUNING.randomShare);
+    const fitnessCloneCount = Math.round(totalAnts * SEASON_TUNING.fitnessCloneShare);
+    const connectionTreeCount = totalAnts - randomCount - fitnessCloneCount;
+    const generationSources = [];
+
+    for (let index = 0; index < randomCount; index += 1) {
+      generationSources.push(null);
+    }
+
+    const sortedFitnessAnts = [...seasonSummary.ants]
+      .sort((left, right) => right.season.fitnessScore - left.season.fitnessScore)
+      .filter((ant) => Number.isFinite(ant.season.fitnessScore));
+
+    for (let index = 0; index < fitnessCloneCount; index += 1) {
+      const sourceAnt = sortedFitnessAnts[index % Math.max(sortedFitnessAnts.length, 1)] ?? null;
+      if (!sourceAnt) {
+        generationSources.push(null);
+        continue;
+      }
+
+      generationSources.push({
+        sourceType: "fitness-clone",
+        antId: sourceAnt.id,
+        genomeSnapshot: this.#snapshotGenomeFromAnt(sourceAnt),
+      });
+    }
+
+    const seasonPayload = {
+      acquisitionPacks: seasonSummary.connectionTreePacks,
+    };
+    const seasonPlan = this.connectionTreeSystem.buildSpawnPlan(seasonPayload, connectionTreeCount, this.random);
+    for (const genomeSource of seasonPlan) {
+      generationSources.push({
+        ...genomeSource,
+        sourceType: "season-pack",
+        genomeSnapshot: cloneGenomeSnapshot(genomeSource.genomeSnapshot),
+      });
+    }
+
+    while (generationSources.length < totalAnts) {
+      generationSources.push(null);
+    }
+
+    return shuffleInPlace(generationSources.slice(0, totalAnts), this.random);
+  }
+
+  #spawnInitialAnts(generationSources = null) {
     this.ants.length = 0;
     this.nextAntId = 0;
 
     for (let index = 0; index < SIMULATION_TUNING.antCount; index += 1) {
       const xOffset = randomRange(this.random, -24, SIMULATION_TUNING.spawnWidth);
+      const genomeSource = generationSources?.[index] ?? null;
 
       this.ants.push(this.#createAnt({
         x: this.queen.position.x + xOffset,
         y: SIMULATION_TUNING.groundY,
-      }));
+      }, genomeSource));
     }
   }
 
@@ -158,6 +429,7 @@ export class SimulationController {
         ANT_TUNING.postureDurationMin,
         ANT_TUNING.postureDurationMax
       ),
+      lifespanSeconds: this.#randomInitialLifespan(),
     };
     const ant = new Ant({
       id: this.nextAntId,
@@ -173,20 +445,17 @@ export class SimulationController {
     });
 
     if (parentGenome?.brainLayers?.length) {
-      ant.brain = new NeuralNet({
+      ant.brain = this.#applyMutation(new NeuralNet({
         inputCount: NEURAL_TUNING.inputCount,
         hiddenLayers: NEURAL_TUNING.hiddenLayers,
         outputCount: NEURAL_TUNING.outputCount,
         outputActivations: ["tanh", "tanh", "sigmoid", "sigmoid"],
         layers: parentGenome.brainLayers,
-      }).mutate({
-        rate: CONNECTION_TREE_TUNING.brainMutationRate,
-        magnitude: CONNECTION_TREE_TUNING.brainMutationMagnitude,
-        random: this.random,
-      });
+      }));
     }
 
     ant.lineageSource = genomeSource;
+    ant.season.fitnessScore = this.#computeFitnessScore(ant);
     this.nextAntId += 1;
     return ant;
   }
@@ -197,7 +466,7 @@ export class SimulationController {
     }
 
     if (genomeSource.genomeSnapshot) {
-      return genomeSource.genomeSnapshot;
+      return cloneGenomeSnapshot(genomeSource.genomeSnapshot);
     }
 
     if (genomeSource.antId == null) {
@@ -209,16 +478,48 @@ export class SimulationController {
       return null;
     }
 
+    return this.#snapshotGenomeFromAnt(parentAnt);
+  }
+
+  #snapshotGenomeFromAnt(ant) {
     return {
-      brainLayers: parentAnt.brain.clone().layers,
+      brainLayers: ant.brain.clone().layers,
       traits: {
-        forwardBias: parentAnt.traits.forwardBias,
-        turnResponsiveness: parentAnt.traits.turnResponsiveness,
+        forwardBias: ant.traits.forwardBias,
+        turnResponsiveness: ant.traits.turnResponsiveness,
       },
     };
   }
 
+  #applyMutation(neuralNet) {
+    return neuralNet;
+  }
+
   #mutateTrait(value) {
-    return value + randomRange(this.random, -CONNECTION_TREE_TUNING.traitMutationRange, CONNECTION_TREE_TUNING.traitMutationRange);
+    return value;
+  }
+
+  #randomInitialLifespan() {
+    return LIFE_TUNING.baseLifespanSeconds * (1 + randomRange(this.random, -LIFE_TUNING.lifespanVarianceRatio, LIFE_TUNING.lifespanVarianceRatio));
+  }
+
+  #computeFitnessScore(ant) {
+    return ant.life.ageSeconds * FITNESS_TUNING.ageWeight +
+      ant.season.mealsEaten * FITNESS_TUNING.mealWeight +
+      ant.season.foodDelivered * FITNESS_TUNING.foodDeliveryWeight +
+      ant.season.rewardContribution * FITNESS_TUNING.rewardContributionWeight;
+  }
+
+  #getLivingAnts() {
+    return this.ants.filter((ant) => ant.state === "alive");
+  }
+
+  #getMovableAnts() {
+    return this.ants.filter((ant) => ant.state === "alive" || ant.movement.verticalState === "falling");
+  }
+
+  #refreshDebugFocus() {
+    const carryingAnt = this.ants.find((ant) => ant.state === "alive" && (ant.carryingFood || ant.food?.carrying));
+    this.debugFocusAntId = carryingAnt?.id ?? null;
   }
 }

@@ -1,4 +1,4 @@
-import { ANT_TUNING, FOOD_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
+import { ANT_TUNING, FOOD_TUNING, LIFE_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -75,6 +75,7 @@ export class FoodSystem {
 
   update(ants, deltaTime, mapSystem, queen, simulationController) {
     queen.lastFedTimer = Math.max(0, queen.lastFedTimer - deltaTime);
+    queen.mealCooldown = Math.max(0, queen.mealCooldown - deltaTime);
 
     for (const ant of ants) {
       ant.food.saluteTimer = Math.max(0, ant.food.saluteTimer - deltaTime);
@@ -85,12 +86,16 @@ export class FoodSystem {
       }
 
       if (ant.food.carrying) {
-        this.#attemptQueenDelivery(ant, queen);
+        this.#attemptQueenDelivery(ant, queen, simulationController);
         continue;
       }
 
       this.#attemptFoodPickup(ant, ants, mapSystem, queen, simulationController);
     }
+  }
+
+  dropCarriedFood(ant, mapSystem) {
+    this.#dropFoodOnCollapse(ant, mapSystem);
   }
 
   #attemptFoodPickup(ant, ants, mapSystem, queen, simulationController) {
@@ -120,11 +125,20 @@ export class FoodSystem {
     const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
     const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath, ants);
 
+    for (const contributor of contributionPath.contributors) {
+      const contributorAnt = ants.find((candidate) => candidate.id === contributor.antId);
+      if (contributorAnt) {
+        contributorAnt.season.rewardContribution += contributor.weight;
+      }
+    }
+
     if (ant.attached || countActiveLegs(ant) > 0) {
       simulationController.attachmentSystem.releaseAntForFoodCarry(ant, ants);
     }
 
     ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
+    ant.season.mealsEaten += FOOD_TUNING.mealUnitAmount;
+    ant.life.lifespanRemaining += LIFE_TUNING.mealRestoreSeconds;
     ant.food.carrying = true;
     ant.food.carriedAmount = taken.amount;
     ant.food.sourceNodeId = foodNode.id;
@@ -136,7 +150,7 @@ export class FoodSystem {
     ant.carryingFood = true;
   }
 
-  #attemptQueenDelivery(ant, queen) {
+  #attemptQueenDelivery(ant, queen, simulationController) {
     const deliveryPoint = {
       x: queen.position.x + FOOD_TUNING.queenDeliveryOffsetX,
       y: queen.position.y,
@@ -154,22 +168,21 @@ export class FoodSystem {
     ant.velocity.x = 0;
     ant.velocity.y = 0;
 
-    queen.foodReceived += ant.food.carriedAmount;
+    queen.foodDelivered += ant.food.carriedAmount;
     queen.deliveryCount += 1;
-    queen.lastFedAmount = ant.food.carriedAmount;
-    queen.lastFedTimer = FOOD_TUNING.saluteDuration;
-
+    ant.season.foodDelivered += ant.food.carriedAmount;
     ant.food.deliveryCount += 1;
     ant.food.lastDeliveredAmount = ant.food.carriedAmount;
     ant.food.saluteTimer = FOOD_TUNING.saluteDuration;
 
-    const spawnCount = this.#randomSpawnCount() * Math.max(1, ant.food.carriedAmount);
     const queuedPayload = clonePayload(ant.food.carriedPayload);
-    queen.pendingSpawnQueue.push({
-      count: spawnCount,
+    const spawnCount = this.#randomSpawnCount() * Math.max(1, ant.food.carriedAmount);
+    queen.mealQueue.push({
+      amount: ant.food.carriedAmount,
       payload: queuedPayload,
+      spawnCount,
     });
-    queen.pendingGenomePool = queuedPayload?.contributors?.map((contributor) => ({ ...contributor })) ?? [];
+    simulationController.recordSeasonMealPayload(queuedPayload);
 
     clearCarriedFood(ant);
   }

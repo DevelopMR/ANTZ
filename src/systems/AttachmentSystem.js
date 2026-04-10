@@ -152,6 +152,11 @@ export class AttachmentSystem {
     ant.physics.lastBreakReason = reason;
   }
 
+  releaseAntForDeath(ant, ants, reason = "death") {
+    const antById = new Map(ants.map((candidate) => [candidate.id, candidate]));
+    this.#releaseAnt(ant, antById, reason);
+  }
+
   update(ants, deltaTime, mapSystem) {
     const antById = new Map(ants.map((ant) => [ant.id, ant]));
 
@@ -469,6 +474,7 @@ export class AttachmentSystem {
     return randomRange(this.random, ANT_TUNING.graspPollCooldownMin, ANT_TUNING.graspPollCooldownMax);
   }
 }
+
 
 
 

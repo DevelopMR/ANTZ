@@ -1,5 +1,5 @@
 import { NeuralNet } from "../ai/NeuralNet.js";
-import { ANT_TUNING, NEURAL_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, LIFE_TUNING, NEURAL_TUNING } from "../config/tuning.js";
 
 function createVector(x = 0, y = 0) {
   return { x, y };
@@ -109,6 +109,20 @@ export class Ant {
       lastDroppedAmount: 0,
     };
 
+    this.life = {
+      ageSeconds: 0,
+      lifespanRemaining: movementProfile.lifespanSeconds,
+      baseLifespanSeconds: movementProfile.lifespanSeconds,
+      deadAtSeasonTime: null,
+    };
+
+    this.season = {
+      mealsEaten: 0,
+      foodDelivered: 0,
+      rewardContribution: 0,
+      fitnessScore: 0,
+    };
+
     this.physics = {
       anchorPriority: null,
       lastBreakReason: null,
@@ -122,4 +136,3 @@ export class Ant {
     };
   }
 }
-
