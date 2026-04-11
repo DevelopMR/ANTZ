@@ -179,7 +179,12 @@ export class AttachmentSystem {
     }
 
     const effectiveDesire = this.#getEffectiveDesire(ant);
-    if (effectiveDesire >= ANT_TUNING.graspHoldThreshold) {
+    const holdSignal = clamp(
+      effectiveDesire * ant.traits.graspHoldBias + (ant.traits.stabilityBias - 1) * 0.12,
+      0,
+      1.5
+    );
+    if (holdSignal >= ANT_TUNING.graspHoldThreshold) {
       return;
     }
 
@@ -254,7 +259,10 @@ export class AttachmentSystem {
       return;
     }
 
-    const totalDesire = participants.reduce((sum, candidate) => sum + this.#getEffectiveDesire(candidate), 0);
+    const totalDesire = participants.reduce(
+      (sum, candidate) => sum + this.#getEffectiveDesire(candidate) * candidate.traits.stabilityBias,
+      0
+    );
     const successThreshold = participants.length * ANT_TUNING.graspSuccessThresholdPerAnt;
 
     if (totalDesire < successThreshold) {
@@ -467,7 +475,8 @@ export class AttachmentSystem {
   }
 
   #getEffectiveDesire(ant) {
-    return clamp((ant.brainState?.graspIntent ?? 0) + ant.attachment.thrillBoost, 0, 1);
+    const intent = (ant.brainState?.graspIntent ?? 0) * ant.traits.graspDriveBias;
+    return clamp(intent + ant.attachment.thrillBoost, 0, 1);
   }
 
   #randomPollCooldown() {

@@ -1,5 +1,5 @@
 import { NeuralNet } from "../ai/NeuralNet.js";
-import { ANT_TUNING, LIFE_TUNING, NEURAL_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, NEURAL_TUNING } from "../config/tuning.js";
 
 function createVector(x = 0, y = 0) {
   return { x, y };
@@ -39,6 +39,13 @@ export class Ant {
     this.connectionIds = [];
     this.traits = {
       forwardBias: movementProfile.forwardBias,
+      graspDriveBias: movementProfile.graspDriveBias,
+      interactDriveBias: movementProfile.interactDriveBias,
+      climbCommitment: movementProfile.climbCommitment,
+      carryCaution: movementProfile.carryCaution,
+      graspHoldBias: movementProfile.graspHoldBias,
+      stabilityBias: movementProfile.stabilityBias,
+      supportPreferenceBias: movementProfile.supportPreferenceBias,
     };
     this.brain = new NeuralNet({
       inputCount: NEURAL_TUNING.inputCount,

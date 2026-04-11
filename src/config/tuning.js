@@ -148,6 +148,24 @@ export const MUTATION_TUNING = {
   fitnessCloneMutationShare: 0.5,
   seasonPackMutationShare: 0.5,
 };
+
+export const TRAIT_TUNING = {
+  initialMin: 0.96,
+  initialMax: 1.04,
+  mutationRange: 0.035,
+  min: 0.7,
+  max: 1.3,
+  names: [
+    "forwardBias",
+    "graspDriveBias",
+    "interactDriveBias",
+    "climbCommitment",
+    "carryCaution",
+    "graspHoldBias",
+    "stabilityBias",
+    "supportPreferenceBias",
+  ],
+};
 export const FOOD_SCENT_TUNING = {
   gridCellSize: 24,
   decayPerSecond: 0.25,

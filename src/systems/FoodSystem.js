@@ -124,7 +124,8 @@ export class FoodSystem {
       return;
     }
 
-    if ((ant.brainState?.interaction ?? 0) < FOOD_TUNING.interactionThreshold) {
+    const interactionDrive = (ant.brainState?.interaction ?? 0) * ant.traits.interactDriveBias;
+    if (interactionDrive < FOOD_TUNING.interactionThreshold) {
       return;
     }
 

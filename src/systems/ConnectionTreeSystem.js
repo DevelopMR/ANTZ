@@ -20,9 +20,7 @@ function snapshotAntGenome(ant, contributor) {
     depth: contributor.depth,
     genomeSnapshot: {
       brainLayers: cloneBrainLayers(ant.brain?.layers ?? []),
-      traits: {
-        forwardBias: ant.traits.forwardBias,
-      },
+      traits: { ...ant.traits },
     },
   };
 }

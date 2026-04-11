@@ -19,6 +19,7 @@ import {
   NEURAL_TUNING,
   SEASON_TUNING,
   SIMULATION_TUNING,
+  TRAIT_TUNING,
 } from "../config/tuning.js";
 import { MovementSystem } from "./MovementSystem.js";
 
@@ -431,9 +432,7 @@ export class SimulationController {
     const visualState = ANT_TUNING.visualStateCycle[this.nextAntId % ANT_TUNING.visualStateCycle.length];
     const parentGenome = this.#resolveParentGenome(genomeSource);
     const movementProfile = {
-      forwardBias: parentGenome?.traits
-        ? this.#mutateTrait(parentGenome.traits.forwardBias, genomeSource)
-        : randomRange(this.random, 0.92, 1.08),
+      ...this.#buildMovementTraits(parentGenome?.traits, genomeSource),
       initialDirection,
       groundY: position.y,
       postureTimer: randomRange(
@@ -498,10 +497,19 @@ export class SimulationController {
   #snapshotGenomeFromAnt(ant) {
     return {
       brainLayers: ant.brain.clone().layers,
-      traits: {
-        forwardBias: ant.traits.forwardBias,
-      },
+      traits: { ...ant.traits },
     };
+  }
+
+  #buildMovementTraits(parentTraits = null, genomeSource = null) {
+    const traits = {};
+
+    for (const name of TRAIT_TUNING.names) {
+      const baseValue = parentTraits?.[name] ?? randomRange(this.random, TRAIT_TUNING.initialMin, TRAIT_TUNING.initialMax);
+      traits[name] = this.#mutateTrait(baseValue, genomeSource);
+    }
+
+    return traits;
   }
 
   #applyMutation(neuralNet, genomeSource = null) {
@@ -521,8 +529,8 @@ export class SimulationController {
       return value;
     }
 
-    const nextValue = value + randomRange(this.random, -CONNECTION_TREE_TUNING.traitMutationRange, CONNECTION_TREE_TUNING.traitMutationRange);
-    return Math.max(0.4, Math.min(1.6, nextValue));
+    const nextValue = value + randomRange(this.random, -TRAIT_TUNING.mutationRange, TRAIT_TUNING.mutationRange);
+    return Math.max(TRAIT_TUNING.min, Math.min(TRAIT_TUNING.max, nextValue));
   }
 
   #assignMutationShare(generationSources, sourceType, mutationShare) {

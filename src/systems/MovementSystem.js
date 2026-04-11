@@ -165,7 +165,8 @@ export class MovementSystem {
       return;
     }
 
-    const wantsClimb = yIntent <= -ANT_TUNING.climbIntentThreshold;
+    const climbIntent = -yIntent * ant.traits.climbCommitment;
+    const wantsClimb = climbIntent >= ANT_TUNING.climbIntentThreshold;
 
     if (!attachedLock && !supportAnt && wantsClimb) {
       const climbTarget = this.#findClimbTarget(ant, ants);
@@ -201,7 +202,7 @@ export class MovementSystem {
     const targetX = ant.food.deliveryTargetX || ant.position.x;
     const deltaX = targetX - ant.position.x;
     const xIntent = clamp(deltaX / 32, -1, 1);
-    const carrySpeedScale = FOOD_TUNING.carrySpeedScale;
+    const carrySpeedScale = FOOD_TUNING.carrySpeedScale * (2 - ant.traits.carryCaution);
 
     ant.movement.desiredDirection = xIntent;
     this.#applyHorizontalMotion(ant, deltaTime, mapSystem, null, xIntent, carrySpeedScale);
@@ -471,18 +472,20 @@ export class MovementSystem {
         continue;
       }
 
+      const supportPreference = ant.traits.supportPreferenceBias;
       const horizontalDistance = Math.abs(candidate.position.x - ant.position.x);
-      if (horizontalDistance > ANT_TUNING.climbHorizontalRange) {
+      if (horizontalDistance > ANT_TUNING.climbHorizontalRange * supportPreference) {
         continue;
       }
 
       const verticalDistance = Math.abs(candidate.position.y - ant.position.y);
-      if (verticalDistance > ANT_TUNING.supportHeight * 0.35) {
+      if (verticalDistance > ANT_TUNING.supportHeight * (0.3 + 0.08 * supportPreference)) {
         continue;
       }
 
-      if (horizontalDistance < bestDistance) {
-        bestDistance = horizontalDistance;
+      const candidateScore = horizontalDistance / supportPreference;
+      if (candidateScore < bestDistance) {
+        bestDistance = candidateScore;
         bestTarget = candidate;
       }
     }
