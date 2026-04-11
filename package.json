@@ -9,7 +9,6 @@
     "tools:check": "node tooling/check-cli.js",
     "gh:status": "node tooling/gh-status.js",
     "test:phase5": "node tooling/phase5-smoke.js",
-    "test:phase10:traits": "node tooling/phase10-traits-check.js",
     "spellcheck": "cspell --no-progress --show-context --show-suggestions \"**/*.{md,js,json}\"",
     "spellcheck:words": "cspell trace graspIntent pheromone PixiJS xVel yVel"
   },
