@@ -3,6 +3,8 @@ import { SIMULATION_TUNING } from "./config/tuning.js";
 import { WorldRenderer } from "./render/WorldRenderer.js";
 
 const HEADLESS_STEPS_PER_FRAME = 12;
+const BATCH_MAX_STEPS_PER_FRAME = 240;
+const BATCH_CPU_BUDGET_MS = 12;
 
 async function boot() {
   const container = document.querySelector("#app");
@@ -86,6 +88,14 @@ async function boot() {
     if (simulationMode === "headless") {
       for (let step = 0; step < HEADLESS_STEPS_PER_FRAME; step += 1) {
         simulation.update(SIMULATION_TUNING.fixedTimeStep);
+      }
+    } else if (simulationMode === "batch") {
+      const batchStart = performance.now();
+      let steps = 0;
+
+      while (steps < BATCH_MAX_STEPS_PER_FRAME && performance.now() - batchStart < BATCH_CPU_BUDGET_MS) {
+        simulation.update(SIMULATION_TUNING.fixedTimeStep);
+        steps += 1;
       }
     } else {
       simulation.update(deltaTime);
