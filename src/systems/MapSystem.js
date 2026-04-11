@@ -278,6 +278,30 @@ function resolveWallBoundary(currentX, minX, maxX) {
   return Math.abs(currentX - minX) <= Math.abs(currentX - maxX) ? minX : maxX;
 }
 
+function compareWorldObjects(left, right) {
+  if (left.x !== right.x) {
+    return left.x - right.x;
+  }
+
+  if (left.y !== right.y) {
+    return right.y - left.y;
+  }
+
+  return String(left.id).localeCompare(String(right.id));
+}
+
+function compareFoodNodes(left, right) {
+  if (left.x !== right.x) {
+    return left.x - right.x;
+  }
+
+  if (left.y !== right.y) {
+    return right.y - left.y;
+  }
+
+  return String(left.id).localeCompare(String(right.id));
+}
+
 export class MapSystem {
   constructor() {
     const groundTop = SIMULATION_TUNING.groundY + 8;
@@ -291,14 +315,14 @@ export class MapSystem {
       makeWall("wall-2", 840, 246, 26, this.ground.y - 246),
       makeWall("wall-3", 1082, 182, 24, this.ground.y - 182),
       makeWall("ledge-0", 632, 412, 162, 16),
-    ];
+    ].sort(compareWorldObjects);
     this.wallById = new Map(this.walls.map((wall) => [wall.id, wall]));
 
     this.pegs = [
       makePeg("peg-0", 372, 452, 16),
       makePeg("peg-1", 668, 332, 18),
       makePeg("peg-2", 950, 228, 19),
-    ];
+    ].sort(compareWorldObjects);
 
     this.foodNodes = [
       makeFood("food-0", 372, 424, FOOD_TUNING.largeNodeRadius, FOOD_TUNING.largeNodeTrips),
@@ -310,7 +334,7 @@ export class MapSystem {
       makeFood("food-6", 258, 534, FOOD_TUNING.smallNodeRadius, 4),
       makeFood("food-7", 558, 350, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
       makeFood("food-8", 220, 562, FOOD_TUNING.smallNodeRadius, FOOD_TUNING.smallNodeTrips),
-    ];
+    ].sort(compareFoodNodes);
     this.foodNodeById = new Map(this.foodNodes.map((foodNode) => [foodNode.id, foodNode]));
 
     this.#rebuildStaticSensorIndex();
@@ -477,6 +501,7 @@ export class MapSystem {
 
     this.nextDroppedFoodId += 1;
     this.foodNodes.push(foodNode);
+    this.foodNodes.sort(compareFoodNodes);
     this.foodNodeById.set(foodNode.id, foodNode);
     this.#rebuildStaticSensorIndex();
     return foodNode;
@@ -593,8 +618,15 @@ export class MapSystem {
   }
 
   #rebuildStaticSensorIndex() {
-    const activeFoodNodes = this.foodNodes.filter((foodNode) => foodNode.available && foodNode.radius > 0);
-    this.staticSensorObjects = [this.ground, ...this.walls, ...this.pegs, ...activeFoodNodes];
+    const activeFoodNodes = this.foodNodes
+      .filter((foodNode) => foodNode.available && foodNode.radius > 0)
+      .sort(compareFoodNodes);
+    this.staticSensorObjects = [
+      this.ground,
+      ...this.walls,
+      ...this.pegs,
+      ...activeFoodNodes,
+    ];
     this.staticSensorIndex = createSpatialIndex(this.staticSensorObjects, SENSOR_TUNING.spatialHashCellSize);
   }
 }
