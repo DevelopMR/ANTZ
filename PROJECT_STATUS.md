@@ -4,63 +4,61 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 9 - Queen and Reproduction Complete
+Phase 10 - Traits + Mutation In Progress
 
 ## Phase Goal
-Phase 9 turned the reward pipeline into a real seasonal colony loop. The completed phase now:
-- lets the Red Queen process delivered food through a FIFO meal queue
-- spaces queen meals and spawn emissions over time
-- gives ants lifespan, food healing, death, and season fitness
-- archives compact season reward data for next-generation construction
-- restarts the colony when all worker ants die
-- builds the next season from random ants, fitness clones, and season connection-tree packs
+Phase 10 is turning the seasonal colony loop into a true evolutionary system. The current focus is to:
+- inherit compact brain snapshots and selected numeric ant traits across seasons
+- selectively mutate half of fitness-clone offspring and half of season-pack offspring
+- keep trait effects intentionally small and readable while preserving current behavior
+- accelerate observation using display-mode controls and faster browser batch stepping
+- tune selection pressure toward upward structure building so ants can reach the third food
 
 ## What Was Built
-- added ant lifespan, uncapped meal healing, death state, and season fitness bookkeeping
-- split queen-side processing into delivered food, queued meals, and delayed spawn work
-- made delivered food enter a FIFO queen meal queue instead of becoming immediate growth
-- preserved delivered payload packs into season history for later generation building
-- added season rollover when all living ants die and reset food map / queues cleanly
-- built next-generation composition as 40% random, 20% fitness-clone, and 40% season-pack sourced ants
-- kept mutation as explicit no-op hooks for the next phase rather than partially enabling it early
-- added renderer support for season stats and ant-view rebuilding across season resets
-- added a dedicated dead-ant icon for clearer lifecycle readability
-- removed `turnResponsiveness` after confirming it was an old unused concept rather than a live movement trait
+- turned on selective mutation for half of fitness-clone offspring and half of season-pack offspring
+- added inheritable traits for forward drive, grasp drive, interaction drive, climb commitment, carry caution, grasp hold bias, stability bias, and support preference bias
+- packed the full current trait set into connection-tree food payload genome snapshots
+- threaded the new traits into attachment, food pickup, carry-return, and climb-selection behavior conservatively
+- added temporary automated verification for trait inheritance and mutation, then removed the one-off harness after validation
+- added simulation display controls: `Normal`, `No Display`, `Headless`, and `Batch`
+- added a season chip beside the `Ant Sim` title for faster long-run reading
+- sorted food nodes into learning order from left to right and bottom to top, and sorted other map objects left to right for future discovery/index experiments
+- preserved prior queen queueing, death, season rollover, lineage, and debug systems from Phase 9
 
 ## Verification
 Current checks passing:
-- `node --check` on modified Phase 9 systems and rendering files
-- headless `SimulationController` runs showing food delivery, queen meal processing, spawning, ant death, and season rollover
+- `node --check` on modified Phase 10 systems and UI files
+- trait inheritance / mutation verification was run successfully before the temporary harness was removed
+- browser controls for `Normal` / `No Display` / `Headless` / `Batch` are working and user-verified
+- map ordering checks confirmed food index `0` is now the lowest-left reachable food
 - `npm run spellcheck`
 
 Observed in-browser behavior confirmed during this phase:
-- queen meal FIFO and delayed spawning feel stable in live runs
-- ants gain lifespan from food and still die out over time
-- full seasons now complete and restart cleanly
-- season progression appears stable over many observed seasons
-- dead ants display with the dedicated corpse icon
+- faster season observation is working through the new display / batch controls
+- mutation-enabled colonies still run stably after the first inheritable-trait pass
+- food, queen processing, season rollover, and reproduction remain functional with traits enabled
 
 ## Explicit Non-Goals (Still Not Implemented)
-- actual mutation effects on cloned / season-pack offspring
-- broader trait inheritance beyond current movement hooks and packed brain snapshots
 - pheromone map simulation
 - dead-ant recycling into food
 - cutscenes or more theatrical season transitions
 - later map progression / campaign structure
+- a true detached offline batch runner outside the browser loop
+- discovery-index or partial-world collision / sensor optimization based on season knowledge
 
 ## Current Systems Expected
 At minimum:
-- Ant entity/class with support, fall, attachment, food-carry, lifespan, death, and season fitness state
-- Queen entity with food delivery totals, FIFO meal queue, delayed spawn queue, and spawn history
-- NeuralNet feedforward module with clone + mutate support hooks
+- Ant entity/class with support, fall, attachment, food-carry, lifespan, death, season fitness, and inheritable trait state
+- Queen entity with food delivery totals, FIFO meal queue, delayed spawn queue, pending genome pool, and spawn history
+- NeuralNet feedforward module with clone + mutate support
 - BrainSystem input assembly and inference step
-- MovementSystem for locomotion, climbing, falling, free-stack collapse, and carrier return motion
-- AttachmentSystem for poll-based grasp negotiation plus release-on-carry / release-on-death handling
+- MovementSystem for locomotion, climbing, falling, free-stack collapse, carrier return, and trait-influenced climb choice
+- AttachmentSystem for poll-based grasp negotiation plus trait-influenced grasp/hold behavior
 - PhysicsSystem for spring-damper leg solving, bounce, and break behavior
 - FoodSystem for pickup, depletion, carry, drop, delivery, healing, and queen queue handoff
 - FoodScentSystem for scent field update, drift, and scalar sampling
-- ConnectionTreeSystem for support-path resolution, payload packing, and spawn-plan generation
-- Rendering layer with tracked-ant debug, scenario season stats, and dead-ant visuals
+- ConnectionTreeSystem for support-path resolution, payload packing, trait snapshot packing, and spawn-plan generation
+- Rendering layer with tracked-ant debug, scenario season stats, display-mode controls, and season HUD chip
 
 ## Known Constraints
 - Browser-first (no backend)
@@ -69,15 +67,17 @@ At minimum:
 - current return-to-queen logic is still scripted rather than learned
 - reward attribution remains intentionally simple and only follows the direct support path
 - season archives are compact payload/pack summaries rather than full colony replays
-- next-generation sourcing is in place, but mutation remains intentionally disabled until Phase 10
+- current batch mode is browser-batch rather than a separate offline runner
+- dynamic dropped food means future discovery-index optimizations must treat static and spawned food separately
 
 ## Warning Predictions
 These are not blockers, but they should be watched in later analysis:
-- current fitness weighting may bias strongly toward simple survival if food pressure is too weak
+- current fitness weighting may still bias toward easy-food farming unless upward progress rewards are pushed harder
 - direct support-path credit may still miss structurally meaningful ants outside the traced chain
-- season-pack share vs fitness-clone share may need retuning once mutation turns on
-- longer queen meal delays may need stronger visualization if reproduction becomes harder to read
-- dead-ant persistence and future recycling could change season pacing significantly once introduced
+- stronger reward and spawn tuning could overfit ants to the current handcrafted map if left in place too long
+- mutation is now live, so too much extra tuning stacked on top could make causality harder to read
+- dynamic dropped food prevents naive “first N food indexes only” optimizations from staying correct
+- a later return to a more natural struggle will probably require dialing back the temporary upward-progress boosts
 
 ## Environment Status
 - core workflow toolchain is healthy: `git`, `node`, `npm`, `gh`, `rg`, `fd`, `jq`, `bat`
@@ -85,20 +85,22 @@ These are not blockers, but they should be watched in later analysis:
 - GitHub CLI auth is configured for regular GitHub-based workflow
 - shared workflow scripts exist for tool checking, GitHub status, spellcheck, and Phase 5 smoke tests
 
-## Next Phase
-Phase 10 - Traits + Mutation
+## Current Tuning Intent
+This is the current agreed direction for the next observation pass. The goal is to make upward progress fun and obvious first, then later dial it back if the colony becomes too efficient.
 
-Primary focus for the next phase:
-- turn on mutation for half of fitness-clone offspring and half of season-pack offspring
-- decide exactly which numeric traits are inherited and mutated
-- keep network topology fixed while mutating weights and biases conservatively
-- tune mutation strength to preserve learned structure-building while allowing exploration
+Planned boost profile:
+- `1.` give a STRONG boost to connection-tree climber reward pressure
+- `2.` give a STRONG boost to direct food-delivery reproductive payoff
+- `3.` give a SMALL boost to survival / lifespan extension pressure
+- `4.` give a MODERATE boost to climbing willingness
+- `5.` give a MODERATE boost to grasp formation / persistence
+- `6.` give a MODERATE boost to selection pressure over random drift
 
 ## Immediate Next Actions
-1. Re-read `AGENTS.md` and `ARCHITECTURE.md` before starting mutation work
-2. Decide the first inheritable trait set beyond current movement hooks
-3. Turn the current mutation no-op hooks into real selective mutation paths
-4. Add debug that helps verify which offspring are mutated versus exact copies
+1. Apply the agreed aggressive upward-progress tuning pass
+2. Observe whether stronger connection-tree, delivery, and spawn pressure improves third-food reach attempts
+3. Record which boosts feel effective versus overly artificial
+4. Revisit later whether to dial the struggle back toward a more natural climb after success
 
 ## Related Handoff Note
 - see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context

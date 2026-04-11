@@ -12,14 +12,14 @@ Primary goals covered across this session:
 - complete Phase 7 food scent map
 - complete Phase 8 connection tree + rewards
 - complete Phase 9 queen / reproduction / season lifecycle
-- preserve enough context to resume cleanly into traits + mutation work
+- continue cleanly into Phase 10 traits + mutation work
 
 ## Project Snapshot
 
 - Repository: `d:devANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
-- Current documented phase: `Phase 9 - Queen and Reproduction Complete`
-- Next intended phase: `Phase 10 - Traits + Mutation`
+- Current documented phase: `Phase 10 - Traits + Mutation In Progress`
+- Current working focus: `aggressive upward-progress tuning toward the third food`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -66,7 +66,8 @@ Current verification state:
 - `gh:status` works and GitHub auth is configured
 - repo spellcheck passes
 - Phase 5 smoke suite passes
-- headless Phase 9 simulation ticks and season rollover checks pass
+- browser display controls for `Normal` / `No Display` / `Headless` / `Batch` are working
+- trait inheritance and selective mutation were verified before the temporary harness was removed
 
 ## Current Codebase State
 
@@ -90,59 +91,62 @@ Important current files and modules:
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`
 
-## Phase 9 Summary
+## Phase 10 Snapshot
 
-Phase 9 is now functionally complete as the queen / reproduction / season-lifecycle phase.
+Phase 10 is underway and no longer just planned.
 
-Built during this phase:
-- queen meal FIFO separate from direct delivery and separate from delayed spawn emission
-- ant lifespan with +/- variance, uncapped meal healing, death, and season fitness bookkeeping
-- season end when all worker ants die
-- season archives of delivered food payloads and packed connection-tree sets
-- next-generation construction with 40% random, 20% fitness-clone, and 40% season-pack sourcing
-- explicit no-op mutation hooks so Phase 10 can turn mutation on cleanly
-- scenario debug for season, alive/dead counts, queen meal queue, and queen timing
-- dedicated dead-ant sprite aligned to ground instead of ad hoc rotation tricks
+Built during this phase so far:
+- selective mutation is active for half of fitness-clone offspring and half of season-pack offspring
+- inheritable traits now include forward drive, grasp drive, interaction drive, climb commitment, carry caution, grasp hold bias, stability bias, and support preference bias
+- connection-tree food genome packs now carry the full current trait set alongside compact brain snapshots
+- the first trait hooks are wired into attachment, food pickup, carrying, and climb targeting conservatively
+- temporary automated trait verification was run successfully and then removed as requested
+- browser observation controls now include `Normal`, `No Display`, `Headless`, and `Batch` modes
+- the HUD now shows the current season beside the `Ant Sim` title
+- map object ordering was normalized so food is indexed from left to right and bottom to top, while walls and pegs are ordered left to right
 
-Automated verification completed:
-- `node --check` on modified Phase 9 files
-- headless `SimulationController` runs for food delivery, queen processing, and season rollover
-- `npm run spellcheck`
+Current tuning direction agreed for the next observation pass:
+- give a STRONG boost to connection-tree climber reward pressure
+- give a STRONG boost to direct food-delivery reproductive payoff
+- give a SMALL boost to survival / lifespan extension pressure
+- give a MODERATE boost to climbing willingness
+- give a MODERATE boost to grasp formation / persistence
+- give a MODERATE boost to selection pressure over random drift
 
-User-observed behavior confirmed in-browser:
-- queen meal processing feels stable over long observation
-- food delivery, healing, and delayed spawning all continue working
-- colonies now survive, die out, and restart across many seasons
-- some early selection effects already appear visible even before true mutation is enabled
-- dead-ant icon works cleanly in the live display
+Intent behind this tuning pass:
+- make upward progress fun and visible now
+- push ants toward the third food deliberately rather than waiting for a long natural struggle
+- preserve the option to dial the system back later if the colony starts succeeding too easily
 
 ## Notable Implementation Notes
 
-- The queen now tracks delivered food, eaten food, meal queue, spawn queue, and spawn history separately.
-- Delivered food payloads are archived compactly for season-to-season reuse rather than storing a full ant-by-ant replay.
-- Next-generation sourcing is already split into random / fitness / season-pack buckets.
-- Mutation paths are intentionally present but disabled; Phase 10 should turn them on selectively instead of rewriting reproduction again.
-- Renderer ant views now rebuild when a season reset swaps in a fresh ant array.
+- The queen tracks delivered food, eaten food, meal queue, spawn queue, pending genome pool, and spawn history separately.
+- Delivered food payloads are archived compactly for season-to-season reuse rather than storing a full colony replay.
+- Next-generation sourcing is split into random / fitness / season-pack buckets.
+- Mutation is live now, but intentionally mild.
+- Renderer ant views rebuild when a season reset swaps in a fresh ant array.
 - `turnResponsiveness` was removed after review because it no longer affected runtime behavior and only added misleading trait complexity.
+- Future discovery-based optimization should treat static map order and dynamic dropped-food creation as separate concerns.
 
 ## Warning Predictions For Later Analysis
 
 These are worth keeping on record as we move forward:
-- current fitness scoring may over-reward long-lived ants if food access becomes sparse
+- current fitness scoring may still over-reward easy-food farming if third-food progress does not get enough extra pressure
 - direct support-path credit may still miss important side-support contributors
 - the 40/20/40 generation split may need rebalancing once mutation pressure starts changing colony character
-- mutation strength that is too high could easily erase the tower/food behaviors already emerging
+- mutation strength that is too high could easily erase the tower / food behaviors already emerging
+- stronger temporary upward-progress tuning could solve this handcrafted map in a way that does not generalize
 - richer spawn-lineage debug may be needed once we start asking whether mutation and selection are fair
 
 ## Remaining Near-Term Work
 
 Most likely next step:
-- start Phase 10 planning around traits and selective mutation
+- run the aggressive upward-progress tuning pass and observe whether the third food starts getting solved reliably
 
-Possible Phase 9 follow-up polish if needed:
-- stronger queen queue / meal visualization
-- richer lineage / offspring debug
-- more expressive season transition presentation later
+Likely follow-ups after that:
+- decide which boosts helped most and which felt too artificial
+- consider whether stronger batch / headless tooling is worth a later dedicated slice
+- preserve the option to dial the struggle back toward a more natural climb once the behavior exists
 
 ## Session Close Summary
 
@@ -154,14 +158,15 @@ Built or completed:
 - Phase 7 food scent map with wind drift
 - Phase 8 connection tree + rewards with packed food genomes and queued spawning
 - Phase 9 queen / reproduction / season lifecycle with death and rollover
+- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, and map learning-order cleanup
 
 Assumptions made:
 - compact season payload archives are preferable to storing full colony histories
-- mutation should remain off in Phase 9 even though the hooks are already in place
+- mutation should start mild rather than dramatic
 - a dedicated dead sprite is better than special render rotation logic
-- current seasonal selection is worth validating before broadening the trait set
+- strong temporary tuning is acceptable if it helps bootstrap upward progress and can later be dialed back
 
 Remaining next:
-- begin Phase 10 planning
-- define the first mutation-enabled offspring rules
-- decide exactly which traits are inherited and mutated in the first pass
+- apply the agreed aggressive tuning pass
+- observe whether ants start reaching the third food more consistently
+- decide later which boosts should remain and which should be softened for a more natural struggle

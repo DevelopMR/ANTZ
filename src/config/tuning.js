@@ -34,9 +34,9 @@ export const ANT_TUNING = {
   supportEdgeRollZone: 4,
   wallSupportPadding: 4,
   climbSpeed: 58,
-  climbIntentThreshold: 0.18,
+  climbIntentThreshold: 0.14,
   supportSnapDistance: 3,
-  climbHorizontalRange: 22,
+  climbHorizontalRange: 26,
   collapseScatterStepX: 18,
   collapseScatterStepY: 14,
   gravity: 320,
@@ -47,17 +47,17 @@ export const ANT_TUNING = {
   graspHorizontalTolerance: 5.6,
   graspCoverageRatio: 2 / 3,
   graspPollMinNeighbors: 1,
-  graspPollMaxNeighbors: 4,
+  graspPollMaxNeighbors: 5,
   graspNeighborRadiusX: 34,
   graspNeighborRadiusY: 24,
   graspHardRejectThreshold: 0.12,
-  graspSuccessThresholdPerAnt: 0.5,
-  graspHoldThreshold: 0.35,
+  graspSuccessThresholdPerAnt: 0.46,
+  graspHoldThreshold: 0.31,
   graspThrillBoostMin: 0.08,
   graspThrillBoostMax: 0.22,
   graspThrillDecayPerSecond: 0.08,
   graspPollCooldownMin: 0.4,
-  graspPollCooldownMax: 1.4,
+  graspPollCooldownMax: 1.15,
   graspLegSlotCount: 4,
   wallAnchorReachX: 18,
   wallAnchorReachY: 34,
@@ -107,8 +107,8 @@ export const FOOD_TUNING = {
   queenDeliveryOffsetX: 0,
   queenDeliveryRadius: 18,
   saluteDuration: 0.5,
-  spawnOnFeedMin: 2,
-  spawnOnFeedMax: 6,
+  spawnOnFeedMin: 3,
+  spawnOnFeedMax: 8,
   queenMealInterval: 30,
   spawnQueueInterval: 3,
   spawnOffsetRightMin: 18,
@@ -124,24 +124,24 @@ export const FOOD_TUNING = {
 
 
 export const LIFE_TUNING = {
-  baseLifespanSeconds: 90,
+  baseLifespanSeconds: 100,
   lifespanVarianceRatio: 0.4,
-  mealRestoreSeconds: 90,
+  mealRestoreSeconds: 105,
 };
 
 export const FITNESS_TUNING = {
   ageWeight: 1,
   mealWeight: 30,
-  foodDeliveryWeight: 60,
-  rewardContributionWeight: 45,
-  connectionTreeBaseReward: 1,
-  connectionTreeClimberMultiplier: 1.5,
+  foodDeliveryWeight: 110,
+  rewardContributionWeight: 80,
+  connectionTreeBaseReward: 1.25,
+  connectionTreeClimberMultiplier: 2.1,
 };
 
 export const SEASON_TUNING = {
-  randomShare: 0.4,
-  fitnessCloneShare: 0.2,
-  connectionTreeShare: 0.4,
+  randomShare: 0.3,
+  fitnessCloneShare: 0.25,
+  connectionTreeShare: 0.45,
 };
 
 export const MUTATION_TUNING = {
