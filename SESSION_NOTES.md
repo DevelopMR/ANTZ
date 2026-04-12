@@ -68,6 +68,7 @@ Current verification state:
 - Phase 5 smoke suite passes
 - browser display controls for `Normal` / `No Display` / `Headless` / `Batch` are working
 - trait inheritance and selective mutation were verified before the temporary harness was removed
+- the aggressive upward-progress tuning pass is now live
 
 ## Current Codebase State
 
@@ -104,14 +105,23 @@ Built during this phase so far:
 - browser observation controls now include `Normal`, `No Display`, `Headless`, and `Batch` modes
 - the HUD now shows the current season beside the `Ant Sim` title
 - map object ordering was normalized so food is indexed from left to right and bottom to top, while walls and pegs are ordered left to right
+- the aggressive upward-progress tuning pass is now applied in `src/config/tuning.js`
 
-Current tuning direction agreed for the next observation pass:
-- give a STRONG boost to connection-tree climber reward pressure
-- give a STRONG boost to direct food-delivery reproductive payoff
-- give a SMALL boost to survival / lifespan extension pressure
-- give a MODERATE boost to climbing willingness
-- give a MODERATE boost to grasp formation / persistence
-- give a MODERATE boost to selection pressure over random drift
+Current tuning direction has now been applied:
+- STRONG boost to connection-tree climber reward pressure
+- STRONG boost to direct food-delivery reproductive payoff
+- SMALL boost to survival / lifespan extension pressure
+- MODERATE boost to climbing willingness
+- MODERATE boost to grasp formation / persistence
+- MODERATE boost to selection pressure over random drift
+
+Key live values now include:
+- `connectionTreeClimberMultiplier = 2.1`
+- `foodDeliveryWeight = 110`
+- `rewardContributionWeight = 80`
+- `spawnOnFeedMin = 3`, `spawnOnFeedMax = 8`
+- `climbIntentThreshold = 0.14`
+- `randomShare = 0.3`, `fitnessCloneShare = 0.25`, `connectionTreeShare = 0.45`
 
 Intent behind this tuning pass:
 - make upward progress fun and visible now
@@ -141,7 +151,7 @@ These are worth keeping on record as we move forward:
 ## Remaining Near-Term Work
 
 Most likely next step:
-- run the aggressive upward-progress tuning pass and observe whether the third food starts getting solved reliably
+- observe whether the newly applied upward-progress tuning makes the third food start getting solved reliably
 
 Likely follow-ups after that:
 - decide which boosts helped most and which felt too artificial
@@ -158,7 +168,7 @@ Built or completed:
 - Phase 7 food scent map with wind drift
 - Phase 8 connection tree + rewards with packed food genomes and queued spawning
 - Phase 9 queen / reproduction / season lifecycle with death and rollover
-- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, and map learning-order cleanup
+- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, map learning-order cleanup, and aggressive upward-progress tuning
 
 Assumptions made:
 - compact season payload archives are preferable to storing full colony histories
@@ -167,6 +177,6 @@ Assumptions made:
 - strong temporary tuning is acceptable if it helps bootstrap upward progress and can later be dialed back
 
 Remaining next:
-- apply the agreed aggressive tuning pass
-- observe whether ants start reaching the third food more consistently
+- observe whether ants start reaching the third food more consistently under the live tuning pass
+- record which tuned levers helped most and which felt too artificial
 - decide later which boosts should remain and which should be softened for a more natural struggle

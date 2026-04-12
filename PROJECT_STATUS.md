@@ -31,6 +31,7 @@ Current checks passing:
 - trait inheritance / mutation verification was run successfully before the temporary harness was removed
 - browser controls for `Normal` / `No Display` / `Headless` / `Batch` are working and user-verified
 - map ordering checks confirmed food index `0` is now the lowest-left reachable food
+- aggressive upward-progress tuning pass is now applied in `src/config/tuning.js`
 - `npm run spellcheck`
 
 Observed in-browser behavior confirmed during this phase:
@@ -76,7 +77,7 @@ These are not blockers, but they should be watched in later analysis:
 - direct support-path credit may still miss structurally meaningful ants outside the traced chain
 - stronger reward and spawn tuning could overfit ants to the current handcrafted map if left in place too long
 - mutation is now live, so too much extra tuning stacked on top could make causality harder to read
-- dynamic dropped food prevents naive “first N food indexes only” optimizations from staying correct
+- dynamic dropped food prevents naive `first N food indexes only` optimizations from staying correct
 - a later return to a more natural struggle will probably require dialing back the temporary upward-progress boosts
 
 ## Environment Status
@@ -86,21 +87,29 @@ These are not blockers, but they should be watched in later analysis:
 - shared workflow scripts exist for tool checking, GitHub status, spellcheck, and Phase 5 smoke tests
 
 ## Current Tuning Intent
-This is the current agreed direction for the next observation pass. The goal is to make upward progress fun and obvious first, then later dial it back if the colony becomes too efficient.
+The aggressive upward-progress tuning pass is now live in `src/config/tuning.js`. The goal is to make upward progress fun and obvious first, then later dial it back if the colony becomes too efficient.
 
-Planned boost profile:
-- `1.` give a STRONG boost to connection-tree climber reward pressure
-- `2.` give a STRONG boost to direct food-delivery reproductive payoff
-- `3.` give a SMALL boost to survival / lifespan extension pressure
-- `4.` give a MODERATE boost to climbing willingness
-- `5.` give a MODERATE boost to grasp formation / persistence
-- `6.` give a MODERATE boost to selection pressure over random drift
+Applied boost profile:
+- `1.` STRONG boost to connection-tree climber reward pressure
+- `2.` STRONG boost to direct food-delivery reproductive payoff
+- `3.` SMALL boost to survival / lifespan extension pressure
+- `4.` MODERATE boost to climbing willingness
+- `5.` MODERATE boost to grasp formation / persistence
+- `6.` MODERATE boost to selection pressure over random drift
+
+Most important live dial changes:
+- `connectionTreeClimberMultiplier` `1.5 -> 2.1`
+- `foodDeliveryWeight` `60 -> 110`
+- `rewardContributionWeight` `45 -> 80`
+- `spawnOnFeedMin/Max` `2..6 -> 3..8`
+- `climbIntentThreshold` `0.18 -> 0.14`
+- `randomShare` `0.4 -> 0.3`
 
 ## Immediate Next Actions
-1. Apply the agreed aggressive upward-progress tuning pass
-2. Observe whether stronger connection-tree, delivery, and spawn pressure improves third-food reach attempts
-3. Record which boosts feel effective versus overly artificial
-4. Revisit later whether to dial the struggle back toward a more natural climb after success
+1. Observe whether the live tuning pass improves third-food reach attempts
+2. Watch for earlier tower formation under the middle and third food
+3. Record whether easy-food farming is still dominating despite the stronger climber reward
+4. Decide later which boosts should remain and which should be softened for a more natural struggle
 
 ## Related Handoff Note
 - see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context
