@@ -41,6 +41,7 @@ const DEBUG_PANEL_LAYOUT = {
   inputsX: 18,
   outputsX: 170,
   antX: 356,
+  fitnessRightX: WORLD_WIDTH - 18,
   topY: 51,
   scenarioX: 18,
   scenarioY: 299,
@@ -138,6 +139,7 @@ function formatAntDebug(ant) {
   const activeLegCount = ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
   const lines = [
     "Tracked Ant",
+    `fitness ${formatScalar(ant.season?.fitnessScore ?? 0)}`,
     `state ${ant.movement?.verticalState ?? "unknown"}`,
     `support ${ant.movement?.supportType ?? "unknown"}`,
     `legs ${activeLegCount}`,
@@ -184,6 +186,14 @@ function formatAntDebug(ant) {
   }
 
   return lines.join("\n");
+}
+
+function formatTrackedFitness(ant) {
+  const fitness = ant?.season?.fitnessScore ?? 0;
+  return [
+    "Fitness",
+    Number.isFinite(fitness) ? fitness.toFixed(2) : "0.00",
+  ].join("\n");
 }
 
 function formatScenarioDebug(simulation) {
@@ -251,6 +261,7 @@ export class WorldRenderer {
     this.debugInputsText = null;
     this.debugOutputsText = null;
     this.debugAntText = null;
+    this.debugFitnessText = null;
     this.debugScenarioText = null;
     this.showFoodScentMap = false;
   }
@@ -471,6 +482,7 @@ export class WorldRenderer {
     this.debugAntText.position.set(DEBUG_PANEL_LAYOUT.antX, DEBUG_PANEL_LAYOUT.topY);
     this.worldContainer.addChild(this.debugAntText);
 
+
     this.debugScenarioText = new Text("", BRAIN_TEXT_STYLE);
     this.debugScenarioText.position.set(DEBUG_PANEL_LAYOUT.scenarioX, DEBUG_PANEL_LAYOUT.scenarioY);
     this.worldContainer.addChild(this.debugScenarioText);
@@ -501,6 +513,7 @@ export class WorldRenderer {
       if (this.debugAntText) {
         this.debugAntText.text = "";
       }
+
       if (this.debugScenarioText) {
         this.debugScenarioText.text = "";
       }
@@ -518,9 +531,9 @@ export class WorldRenderer {
       const endPoint = ray.hit
         ? ray.hit.point
         : {
-            x: sensorOrigin.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
-            y: sensorOrigin.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
-          };
+          x: sensorOrigin.x + Math.cos(ray.angle) * SENSOR_TUNING.maxDistance,
+          y: sensorOrigin.y + Math.sin(ray.angle) * SENSOR_TUNING.maxDistance,
+        };
       const lineColor = ray.hit ? sensorScalarToHex(ray.colorScalar) : EMPTY_WEDGE_COLOR;
       const lineWidth = ray.isCenterRay ? 1.5 : 1;
       const lineAlpha = ray.hit ? (ray.isCenterRay ? 0.72 : 0.58) : 0.18;
@@ -602,6 +615,7 @@ export class WorldRenderer {
     if (this.debugAntText) {
       this.debugAntText.text = formatAntDebug(ant);
     }
+
     if (this.debugScenarioText) {
       this.debugScenarioText.text = formatScenarioDebug(this.simulation);
     }

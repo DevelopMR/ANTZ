@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 30,
+  antCount: 100,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -23,8 +23,8 @@ export const SIMULATION_TUNING = {
 export const ANT_TUNING = {
   spriteWidth: 56,
   spriteHeight: 56,
-  maxSpeed: 46,
-  forwardDrive: 60,
+  maxSpeed: 55.2,
+  forwardDrive: 72,
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
   collisionRadius: 11,
@@ -124,17 +124,17 @@ export const FOOD_TUNING = {
 
 
 export const LIFE_TUNING = {
-  baseLifespanSeconds: 100,
+  baseLifespanSeconds: 90,
   lifespanVarianceRatio: 0.4,
-  mealRestoreSeconds: 105,
+  mealRestoreSeconds: 45,
 };
 
 export const FITNESS_TUNING = {
   ageWeight: 1,
-  mealWeight: 30,
-  foodDeliveryWeight: 110,
-  rewardContributionWeight: 80,
-  connectionTreeBaseReward: 1.25,
+  mealWeight: 40,
+  foodDeliveryWeight: 30,
+  rewardContributionWeight: 100,
+  connectionTreeBaseReward: .25,
   connectionTreeClimberMultiplier: 2.1,
 };
 
@@ -243,7 +243,6 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
 
 
 
