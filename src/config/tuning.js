@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 100,
+  antCount: 50,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -23,8 +23,8 @@ export const SIMULATION_TUNING = {
 export const ANT_TUNING = {
   spriteWidth: 56,
   spriteHeight: 56,
-  maxSpeed: 55.2,
-  forwardDrive: 72,
+  maxSpeed: 66.24,
+  forwardDrive: 86.4,
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
   collisionRadius: 11,
@@ -42,6 +42,7 @@ export const ANT_TUNING = {
   gravity: 320,
   maxFallSpeed: 220,
   maxSafeFallDistance: WORLD_HEIGHT * 0.5,
+  maxFallsBeforeDeath: 10,
   maxConnections: 4,
   graspVerticalTolerance: 2.6,
   graspHorizontalTolerance: 5.6,
@@ -243,7 +244,6 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
 
 
 

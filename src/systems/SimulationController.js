@@ -282,7 +282,10 @@ export class SimulationController {
       ant.life.lifespanRemaining -= deltaTime;
       ant.season.fitnessScore = this.#computeFitnessScore(ant);
 
-      if (ant.life.lifespanRemaining <= 0) {
+      if (
+        ant.life.lifespanRemaining <= 0 ||
+        (ant.life.fallCount ?? 0) >= ANT_TUNING.maxFallsBeforeDeath
+      ) {
         this.#handleAntDeath(ant);
       }
     }

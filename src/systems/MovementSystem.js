@@ -606,6 +606,7 @@ export class MovementSystem {
   #startFall(ant, mode) {
     if (ant.movement.verticalState !== "falling") {
       ant.movement.fallStartY = ant.position.y;
+      ant.life.fallCount = (ant.life.fallCount ?? 0) + 1;
       this.totalFalls += 1;
     }
 

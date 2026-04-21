@@ -119,6 +119,7 @@ export class Ant {
       ageSeconds: 0,
       lifespanRemaining: movementProfile.lifespanSeconds,
       baseLifespanSeconds: movementProfile.lifespanSeconds,
+      fallCount: 0,
       deadAtSeasonTime: null,
     };
 

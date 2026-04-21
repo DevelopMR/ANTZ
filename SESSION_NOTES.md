@@ -19,7 +19,7 @@ Primary goals covered across this session:
 - Repository: `d:devANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
 - Current documented phase: `Phase 10 - Traits + Mutation In Progress`
-- Current working focus: `aggressive upward-progress tuning toward the third food`
+- Current working focus: `observe whether the live tuning produces visible learned behavior at all`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -69,6 +69,7 @@ Current verification state:
 - browser display controls for `Normal` / `No Display` / `Headless` / `Batch` are working
 - trait inheritance and selective mutation were verified before the temporary harness was removed
 - the aggressive upward-progress tuning pass is now live
+- syntax checks passed on the latest tuning, movement, lifecycle, and renderer edits
 
 ## Current Codebase State
 
@@ -104,8 +105,12 @@ Built during this phase so far:
 - temporary automated trait verification was run successfully and then removed as requested
 - browser observation controls now include `Normal`, `No Display`, `Headless`, and `Batch` modes
 - the HUD now shows the current season beside the `Ant Sim` title
+- the tracked-ant debug column now shows live `Fitness`
 - map object ordering was normalized so food is indexed from left to right and bottom to top, while walls and pegs are ordered left to right
 - the aggressive upward-progress tuning pass is now applied in `src/config/tuning.js`
+- fitness weights were later reset toward `meals = 40`, `delivery = 30`, `rewardContribution = 100`
+- horizontal ant travel was increased twice and now runs much faster than the earlier baseline
+- ants now track fall count and die after the configured maximum number of falls
 
 Current tuning direction has now been applied:
 - STRONG boost to connection-tree climber reward pressure
@@ -116,10 +121,13 @@ Current tuning direction has now been applied:
 - MODERATE boost to selection pressure over random drift
 
 Key live values now include:
-- `connectionTreeClimberMultiplier = 2.1`
-- `foodDeliveryWeight = 110`
-- `rewardContributionWeight = 80`
-- `spawnOnFeedMin = 3`, `spawnOnFeedMax = 8`
+- `antCount = 50`
+- `mealWeight = 40`
+- `foodDeliveryWeight = 30`
+- `rewardContributionWeight = 100`
+- `maxSpeed = 66.24`
+- `forwardDrive = 86.4`
+- `maxFallsBeforeDeath = 10`
 - `climbIntentThreshold = 0.14`
 - `randomShare = 0.3`, `fitnessCloneShare = 0.25`, `connectionTreeShare = 0.45`
 
@@ -127,6 +135,11 @@ Intent behind this tuning pass:
 - make upward progress fun and visible now
 - push ants toward the third food deliberately rather than waiting for a long natural struggle
 - preserve the option to dial the system back later if the colony starts succeeding too easily
+
+Most recent in-browser observation:
+- ants are moving correctly
+- even well beyond `50` seasons, there was still not much visible learned or strategic behavior
+- the current question on reboot is less "do they move" and more "are the rewards and inheritance producing decisions"
 
 ## Notable Implementation Notes
 
@@ -142,6 +155,8 @@ Intent behind this tuning pass:
 
 These are worth keeping on record as we move forward:
 - current fitness scoring may still over-reward easy-food farming if third-food progress does not get enough extra pressure
+- much faster movement may create the appearance of activity without adding real competence
+- the 10-fall death rule may remove unstable but promising climbers too early
 - direct support-path credit may still miss important side-support contributors
 - the 40/20/40 generation split may need rebalancing once mutation pressure starts changing colony character
 - mutation strength that is too high could easily erase the tower / food behaviors already emerging
@@ -151,9 +166,10 @@ These are worth keeping on record as we move forward:
 ## Remaining Near-Term Work
 
 Most likely next step:
-- observe whether the newly applied upward-progress tuning makes the third food start getting solved reliably
+- observe whether the current tuning produces visible non-random behavior after long season runs
 
 Likely follow-ups after that:
+- decide whether fitness weights, movement speed, or fall-death pressure are obscuring learning
 - decide which boosts helped most and which felt too artificial
 - consider whether stronger batch / headless tooling is worth a later dedicated slice
 - preserve the option to dial the struggle back toward a more natural climb once the behavior exists
@@ -168,7 +184,7 @@ Built or completed:
 - Phase 7 food scent map with wind drift
 - Phase 8 connection tree + rewards with packed food genomes and queued spawning
 - Phase 9 queen / reproduction / season lifecycle with death and rollover
-- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, map learning-order cleanup, and aggressive upward-progress tuning
+- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, tracked-ant fitness HUD, map learning-order cleanup, per-ant fall-death rule, faster locomotion tuning, and aggressive upward-progress tuning
 
 Assumptions made:
 - compact season payload archives are preferable to storing full colony histories
@@ -177,6 +193,6 @@ Assumptions made:
 - strong temporary tuning is acceptable if it helps bootstrap upward progress and can later be dialed back
 
 Remaining next:
-- observe whether ants start reaching the third food more consistently under the live tuning pass
-- record which tuned levers helped most and which felt too artificial
-- decide later which boosts should remain and which should be softened for a more natural struggle
+- observe whether ants show visible learned behavior at all after long runs
+- record whether faster locomotion and fall-death pressure help or hurt emergence
+- decide later which reward and movement dials should remain and which should be softened or redirected

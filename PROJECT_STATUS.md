@@ -22,12 +22,16 @@ Phase 10 is turning the seasonal colony loop into a true evolutionary system. Th
 - added temporary automated verification for trait inheritance and mutation, then removed the one-off harness after validation
 - added simulation display controls: `Normal`, `No Display`, `Headless`, and `Batch`
 - added a season chip beside the `Ant Sim` title for faster long-run reading
+- added tracked-ant `Fitness` display in the rightmost top debug column
 - sorted food nodes into learning order from left to right and bottom to top, and sorted other map objects left to right for future discovery/index experiments
+- added per-ant fall counting and a configurable fall-death rule
+- increased horizontal ant locomotion substantially for faster left/right travel
 - preserved prior queen queueing, death, season rollover, lineage, and debug systems from Phase 9
 
 ## Verification
 Current checks passing:
 - `node --check` on modified Phase 10 systems and UI files
+- `node --check` on updated fall-death and movement files
 - trait inheritance / mutation verification was run successfully before the temporary harness was removed
 - browser controls for `Normal` / `No Display` / `Headless` / `Batch` are working and user-verified
 - map ordering checks confirmed food index `0` is now the lowest-left reachable food
@@ -38,6 +42,8 @@ Observed in-browser behavior confirmed during this phase:
 - faster season observation is working through the new display / batch controls
 - mutation-enabled colonies still run stably after the first inheritable-trait pass
 - food, queen processing, season rollover, and reproduction remain functional with traits enabled
+- ants are moving correctly under the newer speed tuning
+- however, even after `50+` seasons there was still not much visible learned "thinking" behavior
 
 ## Explicit Non-Goals (Still Not Implemented)
 - pheromone map simulation
@@ -74,6 +80,8 @@ At minimum:
 ## Warning Predictions
 These are not blockers, but they should be watched in later analysis:
 - current fitness weighting may still bias toward easy-food farming unless upward progress rewards are pushed harder
+- much faster horizontal motion could amplify noise and make weak policies look busy rather than intelligent
+- the new fall-death rule could punish unstable experimentation before useful scaffold behavior takes hold
 - direct support-path credit may still miss structurally meaningful ants outside the traced chain
 - stronger reward and spawn tuning could overfit ants to the current handcrafted map if left in place too long
 - mutation is now live, so too much extra tuning stacked on top could make causality harder to read
@@ -98,18 +106,20 @@ Applied boost profile:
 - `6.` MODERATE boost to selection pressure over random drift
 
 Most important live dial changes:
-- `connectionTreeClimberMultiplier` `1.5 -> 2.1`
-- `foodDeliveryWeight` `60 -> 110`
-- `rewardContributionWeight` `45 -> 80`
-- `spawnOnFeedMin/Max` `2..6 -> 3..8`
-- `climbIntentThreshold` `0.18 -> 0.14`
-- `randomShare` `0.4 -> 0.3`
+- `antCount = 50`
+- `mealWeight = 40`
+- `foodDeliveryWeight = 30`
+- `rewardContributionWeight = 100`
+- `maxSpeed = 66.24`
+- `forwardDrive = 86.4`
+- `maxFallsBeforeDeath = 10`
+- tracked-ant debug now shows `Fitness`
 
 ## Immediate Next Actions
-1. Observe whether the live tuning pass improves third-food reach attempts
-2. Watch for earlier tower formation under the middle and third food
-3. Record whether easy-food farming is still dominating despite the stronger climber reward
-4. Decide later which boosts should remain and which should be softened for a more natural struggle
+1. Observe whether the current reward mix produces any visible learned behavior after long runs
+2. Watch whether faster movement improves exploration or just increases chaotic motion
+3. Check whether the 10-fall death rule helps selection or suppresses emerging structure attempts
+4. Reassess whether fitness, selection pressure, or movement tuning should be softened or redirected next
 
 ## Related Handoff Note
 - see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context
