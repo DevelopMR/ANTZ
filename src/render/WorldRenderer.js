@@ -199,12 +199,14 @@ function formatTrackedFitness(ant) {
 function formatScenarioDebug(simulation) {
   const livingAnts = simulation?.ants?.filter((ant) => ant.state === "alive").length ?? 0;
   const deadAnts = simulation?.ants?.filter((ant) => ant.state === "dead").length ?? 0;
+  const decayingAnts = simulation?.ants?.filter((ant) => ant.state === "decaying").length ?? 0;
   return [
     "Scenario",
     `season ${simulation?.currentSeason?.index ?? 1}`,
     `season time ${Math.floor(simulation?.currentSeason?.elapsedSeconds ?? 0)}s`,
     `alive ants ${livingAnts}`,
     `dead ants ${deadAnts}`,
+    `decaying ants ${decayingAnts}`,
     `queen delivered ${simulation?.queen?.foodDelivered ?? 0}`,
     `queen food ${simulation?.queen?.foodReceived ?? 0}`,
     `queen meals ${simulation?.queen?.mealQueue?.length ?? 0}`,
@@ -686,5 +688,4 @@ export class WorldRenderer {
     }
   }
 }
-
 

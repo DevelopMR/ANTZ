@@ -12,6 +12,7 @@ import { Queen } from "../entities/Queen.js";
 import {
   ANT_TUNING,
   CONNECTION_TREE_TUNING,
+  CORPSE_TUNING,
   FITNESS_TUNING,
   FOOD_TUNING,
   LIFE_TUNING,
@@ -94,6 +95,18 @@ function createSeasonState(index) {
 
 function clampCount(value, total) {
   return Math.max(0, Math.min(total, Math.round(value)));
+}
+
+function computeCorpseScentIntensity(corpse) {
+  if (!corpse || corpse.state === "none") {
+    return 0;
+  }
+
+  const totalDuration = corpse.state === "dead"
+    ? Math.max(corpse.deadDurationSeconds, 0.0001)
+    : Math.max(corpse.decayDurationSeconds, 0.0001);
+  const progress = Math.max(0, Math.min(1, corpse.stateElapsedSeconds / totalDuration));
+  return corpse.scentBaseIntensity * Math.pow(1 - progress, corpse.scentCurveExponent);
 }
 
 export class SimulationController {
@@ -289,10 +302,16 @@ export class SimulationController {
         this.#handleAntDeath(ant);
       }
     }
+
+    for (const ant of this.ants) {
+      if (ant.state === "dead" || ant.state === "decaying") {
+        this.#updateCorpseState(ant, deltaTime);
+      }
+    }
   }
 
   #handleAntDeath(ant) {
-    if (ant.state === "dead") {
+    if (ant.state === "dead" || ant.state === "decaying") {
       return;
     }
 
@@ -303,11 +322,38 @@ export class SimulationController {
     this.attachmentSystem.releaseAntForDeath(ant, this.ants);
     ant.state = "dead";
     ant.life.deadAtSeasonTime = this.currentSeason.elapsedSeconds;
+    ant.corpse.state = "dead";
+    ant.corpse.stateElapsedSeconds = 0;
+    ant.corpse.removePending = false;
+    ant.corpse.harvestedAtSeasonTime = null;
+    ant.corpse.scentIntensity = computeCorpseScentIntensity(ant.corpse);
     ant.brainState.xVel = 0;
     ant.brainState.yVel = 0;
     ant.brainState.graspIntent = 0;
     ant.brainState.interaction = 0;
     ant.visualState = "dead";
+  }
+
+  #updateCorpseState(ant, deltaTime) {
+    ant.corpse.stateElapsedSeconds += deltaTime;
+
+    if (
+      ant.corpse.state === "dead" &&
+      ant.corpse.stateElapsedSeconds >= ant.corpse.deadDurationSeconds
+    ) {
+      ant.state = "decaying";
+      ant.corpse.state = "decaying";
+      ant.corpse.stateElapsedSeconds = 0;
+    }
+
+    if (
+      ant.corpse.state === "decaying" &&
+      ant.corpse.stateElapsedSeconds >= ant.corpse.decayDurationSeconds
+    ) {
+      ant.corpse.removePending = true;
+    }
+
+    ant.corpse.scentIntensity = computeCorpseScentIntensity(ant.corpse);
   }
 
   #completeSeasonAndRestart() {
