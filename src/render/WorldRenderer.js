@@ -157,6 +157,12 @@ function formatAntDebug(ant) {
   if (carriedPayload) {
     lines.push(`payload grabs ${carriedPayload.acquisitionCount ?? 0}`);
     lines.push(`payload packs ${carriedPayload.acquisitionPacks?.length ?? 0}`);
+    const corpseContributors = carriedPayload.contributors.filter((contributor) =>
+      contributor.isCorpse || contributor.roles?.includes("corpse-source") || contributor.roles?.includes("corpse-support")
+    );
+    if (corpseContributors.length > 0) {
+      lines.push(`payload corpse ${corpseContributors.length}`);
+    }
     for (const contributor of carriedPayload.contributors.slice(0, 4)) {
       lines.push(`reward ant-${contributor.antId} ${formatScalar(contributor.weight)}`);
     }

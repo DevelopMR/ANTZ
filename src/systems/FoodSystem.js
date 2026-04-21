@@ -50,6 +50,7 @@ function buildCorpsePayload(corpseAnt) {
             weight: contributorWeight,
             role: "corpse-source",
             depth: 0,
+            isCorpse: true,
             genomeSnapshot,
           },
         ],
@@ -61,6 +62,7 @@ function buildCorpsePayload(corpseAnt) {
         weight: contributorWeight,
         roles: ["corpse-source"],
         touches: 1,
+        isCorpse: true,
       },
     ],
     latestPath: {
@@ -73,6 +75,7 @@ function buildCorpsePayload(corpseAnt) {
           weight: contributorWeight,
           role: "corpse-source",
           depth: 0,
+          isCorpse: true,
         },
       ],
     },
@@ -91,13 +94,14 @@ function clonePayload(payload) {
       obtainerId: pack.obtainerId,
       baseType: pack.baseType,
       baseId: pack.baseId,
-      contributors: (pack.contributors ?? []).map((contributor) => ({
-        antId: contributor.antId,
-        weight: contributor.weight,
-        role: contributor.role,
-        depth: contributor.depth,
-        genomeSnapshot: contributor.genomeSnapshot
-          ? {
+        contributors: (pack.contributors ?? []).map((contributor) => ({
+          antId: contributor.antId,
+          weight: contributor.weight,
+          role: contributor.role,
+          depth: contributor.depth,
+          isCorpse: contributor.isCorpse ?? false,
+          genomeSnapshot: contributor.genomeSnapshot
+            ? {
               brainLayers: (contributor.genomeSnapshot.brainLayers ?? []).map((layer) => ({
                 activation: layer.activation,
                 weights: layer.weights.map((row) => [...row]),
@@ -128,6 +132,11 @@ function applyConnectionTreeReward(contributionPath, ants) {
   for (const contributor of orderedContributors) {
     const contributorAnt = ants.find((candidate) => candidate.id === contributor.antId);
     if (!contributorAnt) {
+      reward *= FITNESS_TUNING.connectionTreeClimberMultiplier;
+      continue;
+    }
+
+    if (isCorpseAnt(contributorAnt)) {
       reward *= FITNESS_TUNING.connectionTreeClimberMultiplier;
       continue;
     }

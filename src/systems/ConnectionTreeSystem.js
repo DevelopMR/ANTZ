@@ -1,4 +1,4 @@
-import { CONNECTION_TREE_TUNING } from "../config/tuning.js";
+import { CONNECTION_TREE_TUNING, CORPSE_TUNING } from "../config/tuning.js";
 
 function roundWeight(value) {
   return Math.round(value * 1000) / 1000;
@@ -18,6 +18,7 @@ function snapshotAntGenome(ant, contributor) {
     weight: roundWeight(contributor.weight),
     role: contributor.role,
     depth: contributor.depth,
+    isCorpse: contributor.isCorpse ?? false,
     genomeSnapshot: {
       brainLayers: cloneBrainLayers(ant.brain?.layers ?? []),
       traits: { ...ant.traits },
@@ -25,13 +26,42 @@ function snapshotAntGenome(ant, contributor) {
   };
 }
 
-function makeContributorEntry(antId, weight, role, depth) {
+function makeContributorEntry(antId, weight, role, depth, isCorpse = false) {
   return {
     antId,
     weight: roundWeight(weight),
     role,
     depth,
+    isCorpse,
   };
+}
+
+function isCorpseAnt(ant) {
+  return ant?.state === "dead" || ant?.state === "decaying";
+}
+
+function clampCorpseInfluence(contributors, capRatio = CORPSE_TUNING.genomeInfluenceCap) {
+  const livingWeight = contributors
+    .filter((contributor) => !contributor.isCorpse)
+    .reduce((sum, contributor) => sum + contributor.weight, 0);
+  const corpseWeight = contributors
+    .filter((contributor) => contributor.isCorpse)
+    .reduce((sum, contributor) => sum + contributor.weight, 0);
+
+  if (corpseWeight <= 0 || livingWeight <= 0 || capRatio <= 0 || capRatio >= 1) {
+    return contributors.map((contributor) => ({ ...contributor, weight: roundWeight(contributor.weight) }));
+  }
+
+  const maxCorpseWeight = (livingWeight * capRatio) / (1 - capRatio);
+  if (corpseWeight <= maxCorpseWeight) {
+    return contributors.map((contributor) => ({ ...contributor, weight: roundWeight(contributor.weight) }));
+  }
+
+  const corpseScale = maxCorpseWeight / corpseWeight;
+  return contributors.map((contributor) => ({
+    ...contributor,
+    weight: roundWeight(contributor.isCorpse ? contributor.weight * corpseScale : contributor.weight),
+  }));
 }
 
 function clonePack(pack) {
@@ -40,13 +70,14 @@ function clonePack(pack) {
     obtainerId: pack.obtainerId,
     baseType: pack.baseType,
     baseId: pack.baseId,
-    contributors: (pack.contributors ?? []).map((contributor) => ({
-      antId: contributor.antId,
-      weight: contributor.weight,
-      role: contributor.role,
-      depth: contributor.depth,
-      genomeSnapshot: contributor.genomeSnapshot
-        ? {
+      contributors: (pack.contributors ?? []).map((contributor) => ({
+        antId: contributor.antId,
+        weight: contributor.weight,
+        role: contributor.role,
+        depth: contributor.depth,
+        isCorpse: contributor.isCorpse ?? false,
+        genomeSnapshot: contributor.genomeSnapshot
+          ? {
             brainLayers: cloneBrainLayers(contributor.genomeSnapshot.brainLayers),
             traits: { ...contributor.genomeSnapshot.traits },
           }
@@ -61,14 +92,15 @@ export class ConnectionTreeSystem {
     const contributors = [];
     const seenAntIds = new Set();
 
-    contributors.push(
-      makeContributorEntry(
-        obtainer.id,
-        CONNECTION_TREE_TUNING.obtainerWeight,
-        "obtainer",
-        0
-      )
-    );
+      contributors.push(
+        makeContributorEntry(
+          obtainer.id,
+          CONNECTION_TREE_TUNING.obtainerWeight,
+          "obtainer",
+          0,
+          false
+        )
+      );
     seenAntIds.add(obtainer.id);
 
     let currentAnt = obtainer;
@@ -101,8 +133,13 @@ export class ConnectionTreeSystem {
         break;
       }
 
+      const isCorpse = isCorpseAnt(supportAnt);
+      const adjustedWeight = isCorpse
+        ? weight * this.#getCorpseWeightMultiplier(supportAnt)
+        : weight;
+
       contributors.push(
-        makeContributorEntry(supportAnt.id, weight, "support", depth)
+        makeContributorEntry(supportAnt.id, adjustedWeight, isCorpse ? "corpse-support" : "support", depth, isCorpse)
       );
       seenAntIds.add(supportAnt.id);
       currentAnt = supportAnt;
@@ -110,9 +147,11 @@ export class ConnectionTreeSystem {
       baseId = currentAnt.movement?.supportId ?? currentAnt.id;
     }
 
+    const cappedContributors = clampCorpseInfluence(contributors);
+
     return {
       obtainerId: obtainer.id,
-      contributors,
+      contributors: cappedContributors,
       baseType,
       baseId,
       acquisitionCount: 1,
@@ -126,12 +165,14 @@ export class ConnectionTreeSystem {
       obtainerId: contributionPath.obtainerId,
       baseType: contributionPath.baseType,
       baseId: contributionPath.baseId,
-      contributors: contributionPath.contributors
+      contributors: clampCorpseInfluence(
+        contributionPath.contributors
         .map((contributor) => {
           const ant = antById.get(contributor.antId);
           return ant ? snapshotAntGenome(ant, contributor) : null;
         })
-        .filter(Boolean),
+        .filter(Boolean)
+      ),
     };
 
     const merged = {
@@ -155,6 +196,7 @@ export class ConnectionTreeSystem {
         weight: contributor.weight,
         roles: new Set(contributor.roles ?? []),
         touches: contributor.touches ?? 1,
+        isCorpse: contributor.isCorpse ?? false,
       });
     }
 
@@ -172,16 +214,18 @@ export class ConnectionTreeSystem {
         weight: contributor.weight,
         roles: new Set([contributor.role]),
         touches: 1,
+        isCorpse: contributor.isCorpse ?? false,
       });
     }
 
-    const contributors = Array.from(merged.contributors.values())
+    const contributors = clampCorpseInfluence(Array.from(merged.contributors.values())
       .map((entry) => ({
         antId: entry.antId,
-        weight: roundWeight(entry.weight),
+        weight: entry.weight,
         roles: Array.from(entry.roles),
         touches: entry.touches,
-      }))
+        isCorpse: entry.isCorpse ?? false,
+      })))
       .sort((left, right) => right.weight - left.weight || left.antId - right.antId);
 
     return {
@@ -307,5 +351,11 @@ export class ConnectionTreeSystem {
   #getSupportWeight(depth) {
     const index = Math.max(0, depth - 1);
     return CONNECTION_TREE_TUNING.supportDepthWeights[index] ?? 0;
+  }
+
+  #getCorpseWeightMultiplier(ant) {
+    return ant?.state === "decaying"
+      ? ant.corpse?.decayingContributorWeightMultiplier ?? CORPSE_TUNING.decayingContributorWeightMultiplier
+      : ant.corpse?.deadContributorWeightMultiplier ?? CORPSE_TUNING.deadContributorWeightMultiplier;
   }
 }
