@@ -75,6 +75,8 @@ export const ANT_TUNING = {
     walking: 7.5,
     reaching: 4.2,
     grasping: 2.2,
+    dead: 1,
+    decaying: 1,
   },
 };
 
@@ -255,6 +257,5 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
 
 

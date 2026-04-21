@@ -344,6 +344,7 @@ export class SimulationController {
       ant.state = "decaying";
       ant.corpse.state = "decaying";
       ant.corpse.stateElapsedSeconds = 0;
+      ant.visualState = "decaying";
     }
 
     if (
