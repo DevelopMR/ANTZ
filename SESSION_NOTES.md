@@ -18,8 +18,8 @@ Primary goals covered across this session:
 
 - Repository: `d:devANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
-- Current documented phase: `Phase 10 - Traits + Mutation In Progress`
-- Current working focus: `observe whether the live tuning produces visible learned behavior at all`
+- Current documented phase: `Phase 11 - Death + Recycling In Progress`
+- Current working focus: `test the local queen spawn-yield reduction after the corpse loop became highly productive`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -166,14 +166,12 @@ These are worth keeping on record as we move forward:
 ## Remaining Near-Term Work
 
 Most likely next step:
-- observe whether the current tuning produces visible non-random behavior after long season runs
+- test the local `spawnOnFeedMin = 2` / `spawnOnFeedMax = 4` tuning in `src/config/tuning.js`
 
 Likely follow-ups after that:
-- decide whether fitness weights, movement speed, or fall-death pressure are obscuring learning
-- treat `Death + Recycling` as the next implementation phase before the pheromone system
-- decide which boosts helped most and which felt too artificial
-- consider whether stronger batch / headless tooling is worth a later dedicated slice
-- preserve the option to dial the struggle back toward a more natural climb once the behavior exists
+- decide whether queen meal throughput still needs further reduction under corpse-heavy runs
+- choose the next Phase 11 slice after the tuning test: corpse cleanup/removal or larger collapse spectacle
+- keep watching whether the stronger death/recycling loop changes learning pressure in useful ways
 
 ## Phase 11 Implementation Plan
 
@@ -196,6 +194,24 @@ Planned implementation order:
 - `4.` add corpse pickup and one-load recycling into the food loop
 - `5.` extend connection-tree genome packing with corpse-weight caps
 - `6.` add render readability for dead, decaying, spent, and removed transitions
+
+## Latest Phase 11 Snapshot
+
+Phase 11 slices completed so far:
+- corpse lifecycle state/timing data was added to `Ant` and central tuning
+- corpses now progress from `dead` to `decaying` with distinct visuals
+- corpses participate in physics/support handling as inert bodies
+- corpses can fall in some circumstances and still persist in-world
+- corpse harvesting works as a one-load green food return to the queen
+- corpse payloads show in debug as `payload corpse`
+- corpse-weighted genome influence is discounted/capped
+- dead/decaying ants no longer gain postmortem reward contribution
+
+Most recent observed behavior:
+- the sim now produces a fun corpse conveyor belt and a mass grave near the queen
+- ants visibly carry corpse-derived food on their backs
+- the death/recycling loop is now highly productive
+- queen meal volume became too high, so spawn yield was reduced locally from `3-8` to `2-4` per food unit and still needs testing
 
 ## Session Close Summary
 

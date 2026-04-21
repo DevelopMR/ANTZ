@@ -1,16 +1,15 @@
 # RESTART_HANDOFF.md
 
 ## Return Target
-Jump straight back into `Phase 10 - Traits + Mutation` observation.
+Jump straight back into `Phase 11 - Death + Recycling` implementation and tuning.
 
-The important fact on return: the current live tuning and rule pass is already in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js). We are not planning it anymore; we are testing it.
-Once the observation pass is wrapped, the next planned implementation phase is `Phase 11 - Death + Recycling`, ahead of the pheromone system.
-The agreed first implementation slice for that phase is to add explicit corpse lifecycle state and timing data to the ant model and central tuning.
+The important fact on return: the corpse loop is already materially working in the current branch. Corpses can die, decay visually, fall in some situations, be harvested as one-load food, and contribute limited genome influence.
+There is also one current local uncommitted change in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js): queen spawn yield was reduced from `3-8` per food unit to `2-4` and still needs in-browser testing.
 
 ## First 3 Things To Do
 1. Launch the sim.
-2. Switch to `Batch` or `Headless` if you want fast season turnover.
-3. Watch whether ants show any meaningful learned structure-building or food-targeting behavior beyond simple motion, especially after `50+` seasons.
+2. Confirm the local spawn-yield reduction in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js) feels better under corpse-heavy food inflow.
+3. Decide the next Phase 11 slice after that test: likely corpse cleanup/removal or larger collapse spectacle.
 
 ## Best Buttons On Return
 - `Normal`: best for close visual reading once interesting behavior appears
@@ -20,7 +19,19 @@ The agreed first implementation slice for that phase is to add explicit corpse l
 - `Food Scent Map`: optional, only if scent contours matter for the observation
 
 ## What Changed Most Recently
-Recent live tuning changes in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js):
+Recent Phase 11 additions now in the branch:
+- explicit corpse lifecycle data on ants
+- `dead` and `decaying` visuals are distinct
+- corpses remain in physics/support handling as inert exoskeletons
+- corpse harvesting works and creates visible one-load green returns to the queen
+- corpse payloads show up in debug as `payload corpse`
+- corpse gene influence is discounted/capped and postmortem reward gain is skipped
+
+Most recent local-only tuning change in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js):
+- `FOOD_TUNING.spawnOnFeedMin` is now `2`
+- `FOOD_TUNING.spawnOnFeedMax` is now `4`
+
+Still-relevant live values:
 - `SIMULATION_TUNING.antCount` is now `50`
 - fitness weights were reset to `mealWeight = 40`, `foodDeliveryWeight = 30`, `rewardContributionWeight = 100`
 - tracked ant debug now includes a top-right `Fitness` readout in [WorldRenderer.js](/d:/dev/ANTZ/src/render/WorldRenderer.js)
@@ -44,34 +55,30 @@ Recent live tuning changes in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js):
   `connectionTreeShare = 0.45`
 
 ## Most Recent Observation
-- ants are moving correctly and look mechanically healthy
-- even well above `50` seasons, there was not much visible ant "thinking" or convincing learned behavior
-- the next return should focus less on raw movement correctness and more on whether selection pressure, rewards, or inherited traits are producing visible decisions
+- the corpse conveyor-belt behavior is working and looks great
+- a mass grave of decaying ants can form to the left of the queen
+- corpse harvesting is fun and readable, with ants visibly carrying dead-ant food loads
+- queen meals can accumulate too quickly now that corpse-food throughput exists, so the spawn-yield reduction needs testing next
 
 ## What To Watch For
 Positive signs:
-- earlier tower formation beneath middle and third food
-- more ants reaching the second and third food in fewer seasons
-- stronger population bursts after successful deliveries
-- colonies that look more biased toward climbers and scaffold builders
+- corpse food still feels active and fun after the reduced queen spawn yield
+- fewer runaway baby-ant surges when corpse traffic is high
+- corpse harvesting remains readable without the queen queue exploding
+- corpse influence appears in payload/debug without dominating living contributors
 
 Warning signs:
-- ants still farming only the easiest food
-- ants still look random or reflexive after many seasons despite correct locomotion
-- population explosions without better upward progress
-- too much chaotic grasping without stable climb chains
-- success that feels too map-specific or overly forced
+- corpse-driven queen meal queues still balloon too quickly
+- spawn bursts still feel excessive even at `2-4` per food unit
+- corpse harvesting overwhelms normal map-food behavior
+- corpse payload influence starts to look too dominant or too invisible
 
 ## Best Short Notes To Capture
 When you return, the most useful observations will be:
-- first season where behavior looks meaningfully non-random, if that ever happens
-- first season where ants reliably touch the third food
-- whether the middle food now gets harvested routinely
-- whether the third-food attempts come from towers, wall use, or both
-- whether easy-food farming still dominates reproduction
-- whether the new tuning feels fun or too artificial
-- whether the faster movement is helping exploration or just making chaos happen faster
-- whether the 10-fall death rule changes colony stability in a useful way
+- whether the new queen spawn-yield reduction feels correct or still too generous
+- whether corpse food still creates a satisfying conveyor-belt loop
+- whether the queen queue remains readable under corpse-heavy runs
+- what the next Phase 11 slice should be after that tuning pass
 
 ## Quick Commands
 ```powershell
@@ -87,5 +94,5 @@ npm run tools:check
 If you want a quick restart prompt for Codex after reboot, use:
 
 ```text
-Read PROJECT_STATUS.md, SESSION_NOTES.md, and RESTART_HANDOFF.md. We are in Phase 10 observing the live tuning pass. Ant motion looks correct, but even after 50+ seasons there is not much visible learned behavior. Help me assess whether fitness, selection pressure, movement speed, or the new fall-death rule should be adjusted next.
+Read PROJECT_STATUS.md, SESSION_NOTES.md, and RESTART_HANDOFF.md. We are in Phase 11 - Death + Recycling. Corpses can decay, fall, be harvested as one-load food, and contribute limited genome influence. There is one local uncommitted tuning change in src/config/tuning.js reducing queen spawn yield from 3-8 to 2-4 per food unit. Help me test that change and decide the next corpse slice.
 ```

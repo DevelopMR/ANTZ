@@ -4,7 +4,7 @@
 Ant Colony Bridge Simulation
 
 ## Current Phase
-Phase 10 - Traits + Mutation In Progress
+Phase 11 - Death + Recycling In Progress
 
 ## Next Planned Phase
 Phase 11 - Death + Recycling
@@ -27,12 +27,12 @@ Planned first implementation slice:
 - Step 1: add corpse lifecycle state and timing data to `Ant` plus centralized tuning values
 
 ## Phase Goal
-Phase 10 is turning the seasonal colony loop into a true evolutionary system. The current focus is to:
-- inherit compact brain snapshots and selected numeric ant traits across seasons
-- selectively mutate half of fitness-clone offspring and half of season-pack offspring
-- keep trait effects intentionally small and readable while preserving current behavior
-- accelerate observation using display-mode controls and faster browser batch stepping
-- tune selection pressure toward upward structure building so ants can reach the third food
+Phase 11 is adding the corpse lifecycle and recycling loop on top of the existing seasonal/evolution systems. The current focus is to:
+- keep dead and decaying ants in the world as inert support-capable bodies
+- allow unsupported corpses to fall and settle physically
+- let living ants harvest corpses as one-load green food returns to the queen
+- preserve corpse gene influence in payloads, but under corpse-weight caps
+- keep corpse visuals readable and fun while postponing final removal/cleanup spectacle to later slices
 
 ## What Was Built
 - turned on selective mutation for half of fitness-clone offspring and half of season-pack offspring
@@ -47,11 +47,20 @@ Phase 10 is turning the seasonal colony loop into a true evolutionary system. Th
 - added per-ant fall counting and a configurable fall-death rule
 - increased horizontal ant locomotion substantially for faster left/right travel
 - preserved prior queen queueing, death, season rollover, lineage, and debug systems from Phase 9
+- added explicit corpse lifecycle state and timing data on ants
+- added `dead` to `decaying` progression with a future death-scent hook and pending-removal marker
+- added distinct corpse visuals: black dead icon and greenish decaying icon
+- kept corpses in physics/support evaluation as inert exoskeletons
+- allowed corpses to fall and settle in some circumstances while still persisting in-world
+- added corpse harvesting as a one-load food source that heals the carrier and returns one unit to the queen
+- added corpse debug counters such as `corpse food`, `corpse spent`, and `payload corpse`
+- added corpse-weighted genome contribution and capped corpse influence in payload packing
+- blocked postmortem reward gain for dead and decaying ants
 
 ## Verification
 Current checks passing:
-- `node --check` on modified Phase 10 systems and UI files
-- `node --check` on updated fall-death and movement files
+- `node --check` on modified Phase 10 and Phase 11 systems/UI files
+- `node --check` on updated fall-death, corpse, food, movement, and renderer files
 - trait inheritance / mutation verification was run successfully before the temporary harness was removed
 - browser controls for `Normal` / `No Display` / `Headless` / `Batch` are working and user-verified
 - map ordering checks confirmed food index `0` is now the lowest-left reachable food
@@ -63,11 +72,14 @@ Observed in-browser behavior confirmed during this phase:
 - mutation-enabled colonies still run stably after the first inheritable-trait pass
 - food, queen processing, season rollover, and reproduction remain functional with traits enabled
 - ants are moving correctly under the newer speed tuning
+- corpse conveyor-belt behavior is now visible and fun
+- mass graves of decaying ants can form near the queen
+- ants can visibly carry corpse-derived food back to the queen
 - however, even after `50+` seasons there was still not much visible learned "thinking" behavior
 
 ## Explicit Non-Goals (Still Not Implemented)
 - pheromone map simulation
-- dead-ant recycling into food
+- final corpse removal / cleanup spectacle after decay ends
 - cutscenes or more theatrical season transitions
 - later map progression / campaign structure
 - a true detached offline batch runner outside the browser loop
@@ -75,7 +87,7 @@ Observed in-browser behavior confirmed during this phase:
 
 ## Current Systems Expected
 At minimum:
-- Ant entity/class with support, fall, attachment, food-carry, lifespan, death, season fitness, and inheritable trait state
+- Ant entity/class with support, fall, attachment, food-carry, lifespan, corpse state, season fitness, and inheritable trait state
 - Queen entity with food delivery totals, FIFO meal queue, delayed spawn queue, pending genome pool, and spawn history
 - NeuralNet feedforward module with clone + mutate support
 - BrainSystem input assembly and inference step
@@ -85,7 +97,7 @@ At minimum:
 - FoodSystem for pickup, depletion, carry, drop, delivery, healing, and queen queue handoff
 - FoodScentSystem for scent field update, drift, and scalar sampling
 - ConnectionTreeSystem for support-path resolution, payload packing, trait snapshot packing, and spawn-plan generation
-- Rendering layer with tracked-ant debug, scenario season stats, display-mode controls, and season HUD chip
+- Rendering layer with tracked-ant debug, scenario season stats, display-mode controls, corpse counters, and season HUD chip
 
 ## Known Constraints
 - Browser-first (no backend)
@@ -136,11 +148,10 @@ Most important live dial changes:
 - tracked-ant debug now shows `Fitness`
 
 ## Immediate Next Actions
-1. Observe whether the current reward mix produces any visible learned behavior after long runs
-2. Watch whether faster movement improves exploration or just increases chaotic motion
-3. Check whether the 10-fall death rule helps selection or suppresses emerging structure attempts
-4. Reassess whether fitness, selection pressure, or movement tuning should be softened or redirected next
-5. Start Phase 11 as `Death + Recycling` before returning to the pheromone system
+1. Test the local queen spawn-yield reduction now sitting uncommitted in `src/config/tuning.js`
+2. Decide whether corpse-driven food inflow still overfeeds the queen after the new spawn-yield cut
+3. Continue later Phase 11 slices for corpse cleanup/removal and any larger collapse spectacle
+4. Keep watching whether the stronger death/recycling loop changes visible learning pressure in useful ways
 
 ## Related Handoff Note
 - see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context

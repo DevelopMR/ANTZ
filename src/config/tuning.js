@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 50,
+  antCount: 30,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -110,12 +110,12 @@ export const FOOD_TUNING = {
   queenDeliveryOffsetX: 0,
   queenDeliveryRadius: 18,
   saluteDuration: 0.5,
-  spawnOnFeedMin: 3,
-  spawnOnFeedMax: 8,
+  spawnOnFeedMin: 1,
+  spawnOnFeedMax: 4,
   queenMealInterval: 30,
   spawnQueueInterval: 3,
   spawnOffsetRightMin: 18,
-  spawnOffsetRightMax: 68,
+  spawnOffsetRightMax: 154,
   droppedFoodGroundOffsetY: 18,
   droppedFoodRadius: 8,
   smallNodeTrips: 3,
@@ -127,14 +127,14 @@ export const FOOD_TUNING = {
 
 
 export const LIFE_TUNING = {
-  baseLifespanSeconds: 90,
+  baseLifespanSeconds: 60,
   lifespanVarianceRatio: 0.4,
-  mealRestoreSeconds: 45,
+  mealRestoreSeconds: 30,
 };
 
 export const CORPSE_TUNING = {
-  deadDurationSeconds: 8,
-  decayDurationSeconds: 22,
+  deadDurationSeconds: 6,
+  decayDurationSeconds: 14,
   harvestFoodUnits: 1,
   pickupRadius: 14,
   genomeInfluenceCap: 0.2,
@@ -258,4 +258,3 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
