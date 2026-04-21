@@ -4,6 +4,7 @@
 Jump straight back into `Phase 10 - Traits + Mutation` observation.
 
 The important fact on return: the current live tuning and rule pass is already in [tuning.js](/d:/dev/ANTZ/src/config/tuning.js). We are not planning it anymore; we are testing it.
+Once the observation pass is wrapped, the next planned implementation phase is `Phase 11 - Death + Recycling`, ahead of the pheromone system.
 
 ## First 3 Things To Do
 1. Launch the sim.

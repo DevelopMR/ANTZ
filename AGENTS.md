@@ -47,8 +47,8 @@ Current intended sequence:
 7. Connection tree + rewards
 8. Queen + reproduction
 9. Traits + mutation
-10. Pheromone system
-11. Death + recycling
+10. Death + recycling
+11. Pheromone system
 12. Map progression
 13. Visual polish
 

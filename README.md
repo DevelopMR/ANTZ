@@ -129,8 +129,8 @@ Intended build sequence for the current implementation track:
 8. Connection Tree + Rewards
 9. Queen and Reproduction
 10. Traits + Mutation
-11. Pheromone system
-12. Death + recycling
+11. Death + recycling
+12. Pheromone system
 13. Map progression
 14. Visual polish
 

@@ -170,6 +170,7 @@ Most likely next step:
 
 Likely follow-ups after that:
 - decide whether fitness weights, movement speed, or fall-death pressure are obscuring learning
+- treat `Death + Recycling` as the next implementation phase before the pheromone system
 - decide which boosts helped most and which felt too artificial
 - consider whether stronger batch / headless tooling is worth a later dedicated slice
 - preserve the option to dial the struggle back toward a more natural climb once the behavior exists

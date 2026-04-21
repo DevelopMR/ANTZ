@@ -6,6 +6,11 @@ Ant Colony Bridge Simulation
 ## Current Phase
 Phase 10 - Traits + Mutation In Progress
 
+## Next Planned Phase
+Phase 11 - Death + Recycling
+
+The roadmap has been reordered so death/recycling now comes before the pheromone system. The goal is to add a stronger resource-recovery loop before introducing another navigation signal.
+
 ## Phase Goal
 Phase 10 is turning the seasonal colony loop into a true evolutionary system. The current focus is to:
 - inherit compact brain snapshots and selected numeric ant traits across seasons
@@ -120,6 +125,7 @@ Most important live dial changes:
 2. Watch whether faster movement improves exploration or just increases chaotic motion
 3. Check whether the 10-fall death rule helps selection or suppresses emerging structure attempts
 4. Reassess whether fitness, selection pressure, or movement tuning should be softened or redirected next
+5. Start Phase 11 as `Death + Recycling` before returning to the pheromone system
 
 ## Related Handoff Note
 - see [SESSION_NOTES.md](/d:/dev/ANTZ/SESSION_NOTES.md) for the broader tooling + phase handoff context
