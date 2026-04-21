@@ -28,6 +28,10 @@ function isCarryingFood(ant) {
   return ant.carryingFood || ant.food?.carrying;
 }
 
+function isCorpseAnt(ant) {
+  return ant.state === "dead" || ant.state === "decaying";
+}
+
 export class MovementSystem {
   constructor(random = Math.random) {
     this.random = random;
@@ -41,6 +45,11 @@ export class MovementSystem {
     for (const ant of ants) {
       this.#syncExternalFallState(ant);
       this.#updateSupportState(ant, antById, mapSystem);
+      if (isCorpseAnt(ant)) {
+        this.#integrateCorpseMotion(ant, deltaTime, mapSystem, ants, antById);
+        this.#containWithinWorld(ant);
+        continue;
+      }
       this.#updatePosture(ant, deltaTime);
       this.#integrateMotion(ant, deltaTime, mapSystem, ants, antById);
       this.#containWithinWorld(ant);
@@ -193,6 +202,26 @@ export class MovementSystem {
     if (ant.movement.verticalState === "falling") {
       this.#integrateFall(ant, deltaTime, mapSystem, ants, antById);
       return;
+    }
+
+    this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
+  }
+
+  #integrateCorpseMotion(ant, deltaTime, mapSystem, ants, antById) {
+    ant.movement.desiredDirection = 0;
+    ant.velocity.x *= 0.9;
+
+    if (ant.movement.verticalState === "falling") {
+      this.#integrateFall(ant, deltaTime, mapSystem, ants, antById);
+      return;
+    }
+
+    const supportAnt = ant.movement.supportType === "ant"
+      ? antById.get(ant.movement.supportId)
+      : null;
+
+    if (supportAnt) {
+      ant.position.x = supportAnt.position.x + ant.movement.localSupportOffsetX;
     }
 
     this.#resolveVerticalPlacement(ant, deltaTime, mapSystem, antById);
@@ -629,6 +658,11 @@ export class MovementSystem {
   }
 
   #syncVisualState(ant) {
+    if (isCorpseAnt(ant)) {
+      ant.visualState = ant.state === "decaying" ? "decaying" : "dead";
+      return;
+    }
+
     if (isSaluting(ant)) {
       ant.visualState = "reaching";
       return;

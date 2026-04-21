@@ -152,13 +152,12 @@ export class SimulationController {
     while (this.accumulator >= SIMULATION_TUNING.fixedTimeStep) {
       this.currentSeason.elapsedSeconds += SIMULATION_TUNING.fixedTimeStep;
       const livingAnts = this.#getLivingAnts();
-      const movableAnts = this.#getMovableAnts();
       const physicalAnts = this.#getPhysicalAnts();
 
       this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
       this.sensorSystem.update(livingAnts, this.mapSystem, this.queen, this.foodScentSystem);
       this.brainSystem.update(livingAnts);
-      this.movementSystem.update(movableAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.movementSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.attachmentSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.physicsSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.foodSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
@@ -617,10 +616,6 @@ export class SimulationController {
 
   #getLivingAnts() {
     return this.ants.filter((ant) => ant.state === "alive");
-  }
-
-  #getMovableAnts() {
-    return this.ants.filter((ant) => ant.state === "alive" || ant.movement.verticalState === "falling");
   }
 
   #getPhysicalAnts() {
