@@ -97,6 +97,10 @@ function clampCount(value, total) {
   return Math.max(0, Math.min(total, Math.round(value)));
 }
 
+function countActiveLegs(ant) {
+  return ant.attachment?.legs?.filter((leg) => leg.active).length ?? 0;
+}
+
 function computeCorpseScentIntensity(corpse) {
   if (!corpse || corpse.state === "none") {
     return 0;
@@ -149,13 +153,14 @@ export class SimulationController {
       this.currentSeason.elapsedSeconds += SIMULATION_TUNING.fixedTimeStep;
       const livingAnts = this.#getLivingAnts();
       const movableAnts = this.#getMovableAnts();
+      const physicalAnts = this.#getPhysicalAnts();
 
       this.foodScentSystem.update(this.mapSystem, SIMULATION_TUNING.fixedTimeStep);
       this.sensorSystem.update(livingAnts, this.mapSystem, this.queen, this.foodScentSystem);
       this.brainSystem.update(livingAnts);
       this.movementSystem.update(movableAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
-      this.attachmentSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
-      this.physicsSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.attachmentSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
+      this.physicsSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.foodSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
       this.#processQueenLifecycle(SIMULATION_TUNING.fixedTimeStep);
       this.#updateLifeCycle(SIMULATION_TUNING.fixedTimeStep);
@@ -319,7 +324,6 @@ export class SimulationController {
       this.foodSystem.dropCarriedFood(ant, this.mapSystem);
     }
 
-    this.attachmentSystem.releaseAntForDeath(ant, this.ants);
     ant.state = "dead";
     ant.life.deadAtSeasonTime = this.currentSeason.elapsedSeconds;
     ant.corpse.state = "dead";
@@ -332,6 +336,10 @@ export class SimulationController {
     ant.brainState.graspIntent = 0;
     ant.brainState.interaction = 0;
     ant.visualState = "dead";
+
+    if (!ant.attached && countActiveLegs(ant) === 0 && ant.movement.supportType !== "ground") {
+      this.#startCorpseFall(ant);
+    }
   }
 
   #updateCorpseState(ant, deltaTime) {
@@ -615,8 +623,29 @@ export class SimulationController {
     return this.ants.filter((ant) => ant.state === "alive" || ant.movement.verticalState === "falling");
   }
 
+  #getPhysicalAnts() {
+    return this.ants.filter((ant) => !ant.corpse?.removePending);
+  }
+
   #refreshDebugFocus() {
     const carryingAnt = this.ants.find((ant) => ant.state === "alive" && (ant.carryingFood || ant.food?.carrying));
     this.debugFocusAntId = carryingAnt?.id ?? null;
+  }
+
+  #startCorpseFall(ant) {
+    if (ant.movement.verticalState === "falling") {
+      return;
+    }
+
+    ant.movement.supportType = "none";
+    ant.movement.supportId = null;
+    ant.movement.localSupportOffsetX = 0;
+    ant.movement.verticalState = "falling";
+    ant.movement.fallStartY = ant.position.y;
+    ant.movement.fallMode = "collapse";
+    ant.movement.fallCounted = false;
+    ant.movement.collapseScatterNextY = null;
+    ant.movement.bounceCount = 0;
+    ant.velocity.y = Math.max(ant.velocity.y, 0);
   }
 }

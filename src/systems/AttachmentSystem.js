@@ -67,6 +67,10 @@ function countActiveLegs(ant) {
   return ant.attachment.legs.filter((leg) => leg.active).length;
 }
 
+function isCorpseAnt(ant) {
+  return ant.state === "dead" || ant.state === "decaying";
+}
+
 function refreshAttachedState(ant) {
   ant.attached = ant.connectionIds.length > 0 || countActiveLegs(ant) > 0;
   if (!ant.attached) {
@@ -170,6 +174,11 @@ export class AttachmentSystem {
   }
 
   #decayAttachmentState(ant, deltaTime, antById) {
+    if (isCorpseAnt(ant)) {
+      refreshAttachedState(ant);
+      return;
+    }
+
     ant.attachment.pollCooldown = Math.max(0, ant.attachment.pollCooldown - deltaTime);
     ant.attachment.thrillBoost = Math.max(0, ant.attachment.thrillBoost - ANT_TUNING.graspThrillDecayPerSecond * deltaTime);
     refreshAttachedState(ant);
@@ -223,6 +232,10 @@ export class AttachmentSystem {
   #attemptPerchedGrasp(ant, ants, antById, mapSystem) {
     refreshAttachedState(ant);
 
+    if (isCorpseAnt(ant)) {
+      return;
+    }
+
     if (ant.attached || ant.attachment.pollCooldown > 0 || ant.carryingFood || (ant.food?.saluteTimer ?? 0) > 0) {
       return;
     }
@@ -232,7 +245,12 @@ export class AttachmentSystem {
     }
 
     const supportAnt = antById.get(ant.movement.supportId);
-    if (!supportAnt || supportAnt.attached || supportAnt.carryingFood || (supportAnt.food?.saluteTimer ?? 0) > 0) {
+    if (
+      !supportAnt ||
+      supportAnt.carryingFood ||
+      (supportAnt.food?.saluteTimer ?? 0) > 0 ||
+      (!isCorpseAnt(supportAnt) && supportAnt.attached)
+    ) {
       return;
     }
 
@@ -475,6 +493,10 @@ export class AttachmentSystem {
   }
 
   #getEffectiveDesire(ant) {
+    if (isCorpseAnt(ant)) {
+      return 1;
+    }
+
     const intent = (ant.brainState?.graspIntent ?? 0) * ant.traits.graspDriveBias;
     return clamp(intent + ant.attachment.thrillBoost, 0, 1);
   }
