@@ -130,6 +130,17 @@ export const LIFE_TUNING = {
   mealRestoreSeconds: 45,
 };
 
+export const CORPSE_TUNING = {
+  deadDurationSeconds: 8,
+  decayDurationSeconds: 22,
+  harvestFoodUnits: 1,
+  genomeInfluenceCap: 0.2,
+  deadContributorWeightMultiplier: 0.4,
+  decayingContributorWeightMultiplier: 0.2,
+  scentBaseIntensity: 1,
+  scentCurveExponent: 2,
+};
+
 export const FITNESS_TUNING = {
   ageWeight: 1,
   mealWeight: 40,
@@ -244,7 +255,6 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
 
 
 

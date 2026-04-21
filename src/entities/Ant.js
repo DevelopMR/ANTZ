@@ -1,5 +1,5 @@
 import { NeuralNet } from "../ai/NeuralNet.js";
-import { ANT_TUNING, NEURAL_TUNING } from "../config/tuning.js";
+import { ANT_TUNING, CORPSE_TUNING, NEURAL_TUNING } from "../config/tuning.js";
 
 function createVector(x = 0, y = 0) {
   return { x, y };
@@ -121,6 +121,23 @@ export class Ant {
       baseLifespanSeconds: movementProfile.lifespanSeconds,
       fallCount: 0,
       deadAtSeasonTime: null,
+    };
+
+    this.corpse = {
+      state: "none",
+      stateElapsedSeconds: 0,
+      deadDurationSeconds: CORPSE_TUNING.deadDurationSeconds,
+      decayDurationSeconds: CORPSE_TUNING.decayDurationSeconds,
+      availableFoodUnits: CORPSE_TUNING.harvestFoodUnits,
+      harvestedFoodUnits: 0,
+      harvestedAtSeasonTime: null,
+      removePending: false,
+      genomeInfluenceCap: CORPSE_TUNING.genomeInfluenceCap,
+      deadContributorWeightMultiplier: CORPSE_TUNING.deadContributorWeightMultiplier,
+      decayingContributorWeightMultiplier: CORPSE_TUNING.decayingContributorWeightMultiplier,
+      scentBaseIntensity: CORPSE_TUNING.scentBaseIntensity,
+      scentCurveExponent: CORPSE_TUNING.scentCurveExponent,
+      scentIntensity: 0,
     };
 
     this.season = {
