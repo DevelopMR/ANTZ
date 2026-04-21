@@ -136,6 +136,7 @@ export const CORPSE_TUNING = {
   deadDurationSeconds: 8,
   decayDurationSeconds: 22,
   harvestFoodUnits: 1,
+  pickupRadius: 14,
   genomeInfluenceCap: 0.2,
   deadContributorWeightMultiplier: 0.4,
   decayingContributorWeightMultiplier: 0.2,
@@ -257,5 +258,4 @@ export const MAP_TUNING = {
   foodColor: 0x4f8a3b,
   queenColor: 0x8d2a1e,
 };
-
 

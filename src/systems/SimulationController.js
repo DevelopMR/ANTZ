@@ -160,7 +160,7 @@ export class SimulationController {
       this.movementSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.attachmentSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
       this.physicsSystem.update(physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem);
-      this.foodSystem.update(livingAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
+      this.foodSystem.update(livingAnts, physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
       this.#processQueenLifecycle(SIMULATION_TUNING.fixedTimeStep);
       this.#updateLifeCycle(SIMULATION_TUNING.fixedTimeStep);
       this.#refreshDebugFocus();

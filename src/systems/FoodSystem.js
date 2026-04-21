@@ -1,4 +1,4 @@
-import { ANT_TUNING, FITNESS_TUNING, FOOD_TUNING, LIFE_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
+import { ANT_TUNING, CORPSE_TUNING, FITNESS_TUNING, FOOD_TUNING, LIFE_TUNING, SIMULATION_TUNING, WORLD_WIDTH } from "../config/tuning.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -12,6 +12,70 @@ function getFoodPickupProbePosition(ant) {
   return {
     x: ant.position.x,
     y: ant.position.y - ANT_TUNING.supportHeight * 0.4,
+  };
+}
+
+function isCorpseAnt(ant) {
+  return ant.state === "dead" || ant.state === "decaying";
+}
+
+function buildCorpsePayload(corpseAnt) {
+  if (!corpseAnt) {
+    return null;
+  }
+
+  const contributorWeight = corpseAnt.state === "decaying"
+    ? corpseAnt.corpse?.decayingContributorWeightMultiplier ?? 0.2
+    : corpseAnt.corpse?.deadContributorWeightMultiplier ?? 0.4;
+  const genomeSnapshot = {
+    brainLayers: (corpseAnt.brain?.layers ?? []).map((layer) => ({
+      activation: layer.activation,
+      weights: layer.weights.map((row) => [...row]),
+      biases: [...layer.biases],
+    })),
+    traits: { ...corpseAnt.traits },
+  };
+
+  return {
+    acquisitionCount: 1,
+    acquisitionPacks: [
+      {
+        packIndex: 0,
+        obtainerId: corpseAnt.id,
+        baseType: "corpse",
+        baseId: corpseAnt.id,
+        contributors: [
+          {
+            antId: corpseAnt.id,
+            weight: contributorWeight,
+            role: "corpse-source",
+            depth: 0,
+            genomeSnapshot,
+          },
+        ],
+      },
+    ],
+    contributors: [
+      {
+        antId: corpseAnt.id,
+        weight: contributorWeight,
+        roles: ["corpse-source"],
+        touches: 1,
+      },
+    ],
+    latestPath: {
+      obtainerId: corpseAnt.id,
+      baseType: "corpse",
+      baseId: corpseAnt.id,
+      contributors: [
+        {
+          antId: corpseAnt.id,
+          weight: contributorWeight,
+          role: "corpse-source",
+          depth: 0,
+        },
+      ],
+    },
   };
 }
 
@@ -90,7 +154,7 @@ export class FoodSystem {
     this.random = random;
   }
 
-  update(ants, deltaTime, mapSystem, queen, simulationController) {
+  update(ants, allAnts, deltaTime, mapSystem, queen, simulationController) {
     queen.lastFedTimer = Math.max(0, queen.lastFedTimer - deltaTime);
     queen.mealCooldown = Math.max(0, queen.mealCooldown - deltaTime);
 
@@ -107,7 +171,7 @@ export class FoodSystem {
         continue;
       }
 
-      this.#attemptFoodPickup(ant, ants, mapSystem, queen, simulationController);
+      this.#attemptFoodPickup(ant, allAnts, mapSystem, queen, simulationController);
     }
   }
 
@@ -131,33 +195,77 @@ export class FoodSystem {
 
     const pickupProbe = getFoodPickupProbePosition(ant);
     const foodNode = mapSystem.findFullyContainedFoodNode(pickupProbe, FOOD_TUNING.pickupInset);
-    if (!foodNode) {
+    if (foodNode) {
+      const taken = mapSystem.takeFoodUnit(foodNode.id, FOOD_TUNING.carryUnitAmount);
+      if ((taken?.amount ?? 0) <= 0) {
+        return;
+      }
+
+      const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
+      const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath, ants);
+
+      applyConnectionTreeReward(contributionPath, ants);
+      this.#startCarryFromSource(ant, taken.amount, foodNode.id, clonePayload(mergedPayload), queen, simulationController, ants);
+      ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
+      ant.season.mealsEaten += FOOD_TUNING.mealUnitAmount;
       return;
     }
 
-    const taken = mapSystem.takeFoodUnit(foodNode.id, FOOD_TUNING.carryUnitAmount);
-    if ((taken?.amount ?? 0) <= 0) {
+    const corpseAnt = this.#findHarvestableCorpse(pickupProbe, ants, ant.id);
+    if (!corpseAnt) {
       return;
     }
 
+    corpseAnt.corpse.availableFoodUnits = Math.max(0, (corpseAnt.corpse.availableFoodUnits ?? 0) - CORPSE_TUNING.harvestFoodUnits);
+    corpseAnt.corpse.harvestedFoodUnits = (corpseAnt.corpse.harvestedFoodUnits ?? 0) + CORPSE_TUNING.harvestFoodUnits;
+    corpseAnt.corpse.harvestedAtSeasonTime = simulationController.currentSeason.elapsedSeconds;
+
+    const corpsePayload = buildCorpsePayload(corpseAnt);
     const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
-    const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath, ants);
+    const mergedPayload = simulationController.connectionTreeSystem.mergePayload(corpsePayload, contributionPath, ants);
 
-    applyConnectionTreeReward(contributionPath, ants);
+    this.#startCarryFromSource(ant, CORPSE_TUNING.harvestFoodUnits, `corpse-${corpseAnt.id}`, clonePayload(mergedPayload), queen, simulationController, ants);
+    ant.food.mealsEaten += CORPSE_TUNING.harvestFoodUnits;
+    ant.season.mealsEaten += CORPSE_TUNING.harvestFoodUnits;
+  }
 
+  #findHarvestableCorpse(position, ants, pickerAntId) {
+    let bestCorpse = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const ant of ants) {
+      if (ant.id === pickerAntId || !isCorpseAnt(ant) || ant.corpse?.removePending) {
+        continue;
+      }
+
+      if ((ant.corpse?.availableFoodUnits ?? 0) <= 0) {
+        continue;
+      }
+
+      const distance = Math.hypot(position.x - ant.position.x, position.y - ant.position.y);
+      if (distance > CORPSE_TUNING.pickupRadius || distance >= bestDistance) {
+        continue;
+      }
+
+      bestDistance = distance;
+      bestCorpse = ant;
+    }
+
+    return bestCorpse;
+  }
+
+  #startCarryFromSource(ant, amount, sourceNodeId, payload, queen, simulationController, ants) {
     if (ant.attached || countActiveLegs(ant) > 0) {
       simulationController.attachmentSystem.releaseAntForFoodCarry(ant, ants);
     }
 
-    ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
-    ant.season.mealsEaten += FOOD_TUNING.mealUnitAmount;
     ant.life.lifespanRemaining = Math.max(ant.life.lifespanRemaining, ant.life.baseLifespanSeconds);
     ant.life.lifespanRemaining += LIFE_TUNING.mealRestoreSeconds;
     ant.food.carrying = true;
-    ant.food.carriedAmount = taken.amount;
-    ant.food.sourceNodeId = foodNode.id;
-    ant.food.carriedPayload = clonePayload(mergedPayload);
-    ant.food.rewardPathPreview = clonePayload(mergedPayload)?.latestPath ?? null;
+    ant.food.carriedAmount = amount;
+    ant.food.sourceNodeId = sourceNodeId;
+    ant.food.carriedPayload = clonePayload(payload);
+    ant.food.rewardPathPreview = clonePayload(payload)?.latestPath ?? null;
     ant.food.returnMode = "queen";
     ant.food.deliveryTargetX = queen.position.x + FOOD_TUNING.queenDeliveryOffsetX;
     ant.food.deliveryTargetY = queen.position.y;

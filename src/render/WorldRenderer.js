@@ -147,6 +147,12 @@ function formatAntDebug(ant) {
     `mode ${ant.food?.returnMode ?? "none"}`,
   ];
 
+  if (ant.state === "dead" || ant.state === "decaying") {
+    lines.push(`corpse ${ant.corpse?.state ?? ant.state}`);
+    lines.push(`corpse food ${ant.corpse?.availableFoodUnits ?? 0}`);
+    lines.push(`corpse spent ${ant.corpse?.harvestedFoodUnits ?? 0}`);
+  }
+
   const carriedPayload = ant.food?.carriedPayload;
   if (carriedPayload) {
     lines.push(`payload grabs ${carriedPayload.acquisitionCount ?? 0}`);
@@ -200,6 +206,8 @@ function formatScenarioDebug(simulation) {
   const livingAnts = simulation?.ants?.filter((ant) => ant.state === "alive").length ?? 0;
   const deadAnts = simulation?.ants?.filter((ant) => ant.state === "dead").length ?? 0;
   const decayingAnts = simulation?.ants?.filter((ant) => ant.state === "decaying").length ?? 0;
+  const harvestableCorpses = simulation?.ants?.filter((ant) => (ant.corpse?.availableFoodUnits ?? 0) > 0).length ?? 0;
+  const spentCorpses = simulation?.ants?.filter((ant) => (ant.corpse?.availableFoodUnits ?? 0) <= 0 && (ant.corpse?.harvestedFoodUnits ?? 0) > 0).length ?? 0;
   return [
     "Scenario",
     `season ${simulation?.currentSeason?.index ?? 1}`,
@@ -207,6 +215,8 @@ function formatScenarioDebug(simulation) {
     `alive ants ${livingAnts}`,
     `dead ants ${deadAnts}`,
     `decaying ants ${decayingAnts}`,
+    `corpse food ${harvestableCorpses}`,
+    `corpse spent ${spentCorpses}`,
     `queen delivered ${simulation?.queen?.foodDelivered ?? 0}`,
     `queen food ${simulation?.queen?.foodReceived ?? 0}`,
     `queen meals ${simulation?.queen?.mealQueue?.length ?? 0}`,
@@ -688,4 +698,3 @@ export class WorldRenderer {
     }
   }
 }
-
