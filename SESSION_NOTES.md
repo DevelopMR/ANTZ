@@ -175,6 +175,28 @@ Likely follow-ups after that:
 - consider whether stronger batch / headless tooling is worth a later dedicated slice
 - preserve the option to dial the struggle back toward a more natural climb once the behavior exists
 
+## Phase 11 Implementation Plan
+
+Agreed Phase 11 rules:
+- lifecycle flow is `alive -> dead -> decaying -> removed`
+- removed bodies are not kept as a persistent `gone` world state
+- corpses remain visible until the end of decay
+- dead and decaying ants are inert, support-capable exoskeletons with no brain activity and no further fitness gain
+- unsupported corpses topple or fall to a stable resting point
+- grasped corpses do not resist and can support normal structural load
+- a harvested corpse yields one food load total and behaves as a green food-unit style carry source
+- corpse-derived food keeps genome information and can add up to `20%` extra genetic influence under weight-based caps
+- dead and decaying ants may still participate in connection-tree genome packing, but at discounted influence
+- a future death-scent hook should use a power-curve falloff ending at zero by removal
+
+Planned implementation order:
+- `1.` add corpse lifecycle data to `Ant` and tune the new timers, caps, and scent constants
+- `2.` centralize death and corpse progression in the simulation lifecycle
+- `3.` preserve inert corpse falling, grasping, and structural support behavior
+- `4.` add corpse pickup and one-load recycling into the food loop
+- `5.` extend connection-tree genome packing with corpse-weight caps
+- `6.` add render readability for dead, decaying, spent, and removed transitions
+
 ## Session Close Summary
 
 Built or completed:

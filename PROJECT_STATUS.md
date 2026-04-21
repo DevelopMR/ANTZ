@@ -11,6 +11,21 @@ Phase 11 - Death + Recycling
 
 The roadmap has been reordered so death/recycling now comes before the pheromone system. The goal is to add a stronger resource-recovery loop before introducing another navigation signal.
 
+## Phase 11 Planning Snapshot
+Agreed implementation shape for `Death + Recycling`:
+- add explicit ant lifecycle stages: `dead`, `decaying`, then remove from world at `gone`
+- dead and decaying ants are inert exoskeletons with no brain activity, no new fitness gain, and no active resistance
+- unsupported corpses fall to the next stable resting location and then remain physically support-capable
+- grasped corpses can remain in structures and support normal ant loads
+- corpse visuals stay present through the full decay window
+- corpse harvesting yields a single green food-unit style carry load; the carrier heals first and then returns one load to the queen
+- dead and decaying ants may still appear in connection-tree genome packing, but under weight-based caps so they do not dominate
+- corpse-derived food may contribute up to `20%` additional genetic influence when consumed
+- future pheromone work gets a death-scent hook using a power-curve decay, but that signal stays internal for this phase
+
+Planned first implementation slice:
+- Step 1: add corpse lifecycle state and timing data to `Ant` plus centralized tuning values
+
 ## Phase Goal
 Phase 10 is turning the seasonal colony loop into a true evolutionary system. The current focus is to:
 - inherit compact brain snapshots and selected numeric ant traits across seasons
