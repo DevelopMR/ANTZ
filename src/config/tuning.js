@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 30,
+  antCount: 4,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -111,8 +111,8 @@ export const FOOD_TUNING = {
   queenDeliveryRadius: 18,
   saluteDuration: 0.5,
   spawnOnFeedMin: 1,
-  spawnOnFeedMax: 4,
-  queenMealInterval: 30,
+  spawnOnFeedMax: 2,
+  queenMealInterval: 15,
   spawnQueueInterval: 3,
   spawnOffsetRightMin: 18,
   spawnOffsetRightMax: 154,
@@ -127,14 +127,14 @@ export const FOOD_TUNING = {
 
 
 export const LIFE_TUNING = {
-  baseLifespanSeconds: 60,
+  baseLifespanSeconds: 45,
   lifespanVarianceRatio: 0.4,
-  mealRestoreSeconds: 30,
+  mealRestoreSeconds: 20,
 };
 
 export const CORPSE_TUNING = {
-  deadDurationSeconds: 6,
-  decayDurationSeconds: 14,
+  deadDurationSeconds: 5,
+  decayDurationSeconds: 10,
   harvestFoodUnits: 1,
   pickupRadius: 14,
   genomeInfluenceCap: 0.2,
