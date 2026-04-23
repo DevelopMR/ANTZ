@@ -163,6 +163,7 @@ export class SimulationController {
       this.foodSystem.update(livingAnts, physicalAnts, SIMULATION_TUNING.fixedTimeStep, this.mapSystem, this.queen, this);
       this.#processQueenLifecycle(SIMULATION_TUNING.fixedTimeStep);
       this.#updateLifeCycle(SIMULATION_TUNING.fixedTimeStep);
+      this.#cleanupRemovedCorpses();
       this.#refreshDebugFocus();
       this.accumulator -= SIMULATION_TUNING.fixedTimeStep;
 
@@ -362,6 +363,20 @@ export class SimulationController {
     }
 
     ant.corpse.scentIntensity = computeCorpseScentIntensity(ant.corpse);
+  }
+
+  #cleanupRemovedCorpses() {
+    const corpsesToRemove = this.ants.filter((ant) => ant.corpse?.removePending);
+    if (corpsesToRemove.length === 0) {
+      return;
+    }
+
+    for (const corpse of corpsesToRemove) {
+      this.attachmentSystem.releaseAntForDeath(corpse, this.ants, "corpse-cleanup");
+    }
+
+    const removedIds = new Set(corpsesToRemove.map((corpse) => corpse.id));
+    this.ants = this.ants.filter((ant) => !removedIds.has(ant.id));
   }
 
   #completeSeasonAndRestart() {

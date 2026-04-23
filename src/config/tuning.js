@@ -2,7 +2,7 @@ export const WORLD_WIDTH = 1280;
 export const WORLD_HEIGHT = 720;
 
 export const SIMULATION_TUNING = {
-  antCount: 4,
+  antCount: 10,
   spawnWidth: 220,
   fixedTimeStep: 1 / 30,
   maxDeltaTime: 1 / 20,
@@ -23,7 +23,7 @@ export const SIMULATION_TUNING = {
 export const ANT_TUNING = {
   spriteWidth: 56,
   spriteHeight: 56,
-  maxSpeed: 66.24,
+  maxSpeed: 82,
   forwardDrive: 86.4,
   postureDurationMin: 1.4,
   postureDurationMax: 3.2,
@@ -110,7 +110,7 @@ export const FOOD_TUNING = {
   queenDeliveryOffsetX: 0,
   queenDeliveryRadius: 18,
   saluteDuration: 0.5,
-  spawnOnFeedMin: 1,
+  spawnOnFeedMin: 0,
   spawnOnFeedMax: 2,
   queenMealInterval: 15,
   spawnQueueInterval: 3,
