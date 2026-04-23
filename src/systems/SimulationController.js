@@ -224,25 +224,29 @@ export class SimulationController {
 
     if (this.queen.mealCooldown <= 0 && this.queen.mealQueue.length > 0) {
       const meal = this.queen.mealQueue.shift();
-      this.queen.foodReceived += meal.amount;
+      const mealNutrition = meal.spawnNutrition ?? meal.amount ?? 0;
+      const wholeSpawnUnits = Math.floor(mealNutrition);
+      const fractionalNutrition = Math.max(0, mealNutrition - wholeSpawnUnits);
+
+      this.queen.foodReceived += mealNutrition;
       this.queen.lastFedAmount = meal.amount;
       this.queen.lastFedTimer = FOOD_TUNING.saluteDuration;
       this.queen.mealCooldown = FOOD_TUNING.queenMealInterval;
-      this.queen.pendingSpawnQueue.push({
-        count: meal.spawnCount,
-        payload: clonePayload(meal.payload),
-        spawnPlan: null,
-        nextSpawnIndex: 0,
-      });
+
+      for (let index = 0; index < wholeSpawnUnits; index += 1) {
+        this.#queueQueenSpawnPacket(meal.payload, this.#randomSpawnCount());
+      }
+
+      this.queen.spawnNutritionBuffer += fractionalNutrition;
+      while (this.queen.spawnNutritionBuffer >= 1) {
+        this.queen.spawnNutritionBuffer -= 1;
+        this.#queueQueenSpawnPacket(meal.payload, this.#randomSpawnCount());
+      }
     }
 
     while (this.queen.pendingSpawnQueue.length > 0 && !this.queen.pendingSpawnQueue[0].spawnPlan) {
       const queuedSpawn = this.queen.pendingSpawnQueue[0];
-      queuedSpawn.spawnPlan = this.connectionTreeSystem.buildSpawnPlan(
-        queuedSpawn.payload,
-        queuedSpawn.count,
-        this.random
-      );
+      queuedSpawn.spawnPlan = this.#buildMealSpawnPlan(queuedSpawn.payload, queuedSpawn.count);
       queuedSpawn.nextSpawnIndex = 0;
       this.queen.pendingGenomePool = queuedSpawn.payload?.contributors?.map((contributor) => ({ ...contributor })) ?? [];
       this.queen.pendingSpawnCount = queuedSpawn.spawnPlan.length;
@@ -292,6 +296,42 @@ export class SimulationController {
         this.queen.pendingSpawnCount = 0;
       }
     }
+  }
+
+  #queueQueenSpawnPacket(payload, count) {
+    if (count <= 0) {
+      return;
+    }
+
+    this.queen.pendingSpawnQueue.push({
+      count,
+      payload: clonePayload(payload),
+      spawnPlan: null,
+      nextSpawnIndex: 0,
+    });
+  }
+
+  #buildMealSpawnPlan(payload, count) {
+    const plan = this.connectionTreeSystem.buildSpawnPlan(payload, count, this.random);
+    return plan.map((genomeSource) => (
+      this.random() < FOOD_TUNING.randomSpawnChance
+        ? {
+            sourceType: "meal-random",
+            antId: null,
+            weight: 0,
+            role: "random",
+            depth: 0,
+            packIndex: null,
+            genomeSnapshot: null,
+            shouldMutate: false,
+          }
+        : genomeSource
+    ));
+  }
+
+  #randomSpawnCount() {
+    const span = FOOD_TUNING.spawnOnFeedMax - FOOD_TUNING.spawnOnFeedMin + 1;
+    return FOOD_TUNING.spawnOnFeedMin + Math.floor(this.random() * span);
   }
 
   #updateLifeCycle(deltaTime) {

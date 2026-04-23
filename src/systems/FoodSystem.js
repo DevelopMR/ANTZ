@@ -124,11 +124,11 @@ function clonePayload(payload) {
   };
 }
 
-function applyConnectionTreeReward(contributionPath, ants) {
+function applyConnectionTreeReward(contributionPath, ants, multiplier = 1) {
   const orderedContributors = [...(contributionPath?.contributors ?? [])]
     .sort((left, right) => right.depth - left.depth);
 
-  let reward = FITNESS_TUNING.connectionTreeBaseReward;
+  let reward = FITNESS_TUNING.connectionTreeBaseReward * multiplier;
   for (const contributor of orderedContributors) {
     const contributorAnt = ants.find((candidate) => candidate.id === contributor.antId);
     if (!contributorAnt) {
@@ -149,6 +149,9 @@ function applyConnectionTreeReward(contributionPath, ants) {
 function clearCarriedFood(ant) {
   ant.food.carrying = false;
   ant.food.carriedAmount = 0;
+  ant.food.carriedSpawnNutrition = 0;
+  ant.food.carriedRewardMultiplier = 1;
+  ant.food.carriedSourceType = "none";
   ant.food.sourceNodeId = null;
   ant.food.carriedPayload = null;
   ant.food.returnMode = "none";
@@ -213,10 +216,23 @@ export class FoodSystem {
       const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
       const mergedPayload = simulationController.connectionTreeSystem.mergePayload(taken.rewardPayload, contributionPath, ants);
 
-      applyConnectionTreeReward(contributionPath, ants);
-      this.#startCarryFromSource(ant, taken.amount, foodNode.id, clonePayload(mergedPayload), queen, simulationController, ants);
-      ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount;
-      ant.season.mealsEaten += FOOD_TUNING.mealUnitAmount;
+      applyConnectionTreeReward(contributionPath, ants, FOOD_TUNING.normalFoodRewardMultiplier);
+      this.#startCarryFromSource(
+        ant,
+        taken.amount,
+        foodNode.id,
+        clonePayload(mergedPayload),
+        queen,
+        simulationController,
+        ants,
+        {
+          sourceType: "food",
+          spawnNutrition: taken.amount,
+          rewardMultiplier: FOOD_TUNING.normalFoodRewardMultiplier,
+        }
+      );
+      ant.food.mealsEaten += FOOD_TUNING.mealUnitAmount * FOOD_TUNING.normalFoodRewardMultiplier;
+      ant.season.mealsEaten += FOOD_TUNING.mealUnitAmount * FOOD_TUNING.normalFoodRewardMultiplier;
       return;
     }
 
@@ -233,7 +249,20 @@ export class FoodSystem {
     const contributionPath = simulationController.connectionTreeSystem.resolveFoodContributionPath(ant, ants);
     const mergedPayload = simulationController.connectionTreeSystem.mergePayload(corpsePayload, contributionPath, ants);
 
-    this.#startCarryFromSource(ant, CORPSE_TUNING.harvestFoodUnits, `corpse-${corpseAnt.id}`, clonePayload(mergedPayload), queen, simulationController, ants);
+    this.#startCarryFromSource(
+      ant,
+      CORPSE_TUNING.harvestFoodUnits,
+      `corpse-${corpseAnt.id}`,
+      clonePayload(mergedPayload),
+      queen,
+      simulationController,
+      ants,
+      {
+        sourceType: "corpse",
+        spawnNutrition: CORPSE_TUNING.harvestFoodUnits * FOOD_TUNING.corpseSpawnNutritionValue,
+        rewardMultiplier: 1,
+      }
+    );
     ant.food.mealsEaten += CORPSE_TUNING.harvestFoodUnits;
     ant.season.mealsEaten += CORPSE_TUNING.harvestFoodUnits;
   }
@@ -263,7 +292,7 @@ export class FoodSystem {
     return bestCorpse;
   }
 
-  #startCarryFromSource(ant, amount, sourceNodeId, payload, queen, simulationController, ants) {
+  #startCarryFromSource(ant, amount, sourceNodeId, payload, queen, simulationController, ants, options = {}) {
     if (ant.attached || countActiveLegs(ant) > 0) {
       simulationController.attachmentSystem.releaseAntForFoodCarry(ant, ants);
     }
@@ -272,6 +301,9 @@ export class FoodSystem {
     ant.life.lifespanRemaining += LIFE_TUNING.mealRestoreSeconds;
     ant.food.carrying = true;
     ant.food.carriedAmount = amount;
+    ant.food.carriedSpawnNutrition = options.spawnNutrition ?? amount;
+    ant.food.carriedRewardMultiplier = options.rewardMultiplier ?? 1;
+    ant.food.carriedSourceType = options.sourceType ?? "food";
     ant.food.sourceNodeId = sourceNodeId;
     ant.food.carriedPayload = clonePayload(payload);
     ant.food.rewardPathPreview = clonePayload(payload)?.latestPath ?? null;
@@ -301,17 +333,17 @@ export class FoodSystem {
 
     queen.foodDelivered += ant.food.carriedAmount;
     queen.deliveryCount += 1;
-    ant.season.foodDelivered += ant.food.carriedAmount;
+    ant.season.foodDelivered += ant.food.carriedAmount * (ant.food.carriedRewardMultiplier ?? 1);
     ant.food.deliveryCount += 1;
     ant.food.lastDeliveredAmount = ant.food.carriedAmount;
     ant.food.saluteTimer = FOOD_TUNING.saluteDuration;
 
     const queuedPayload = clonePayload(ant.food.carriedPayload);
-    const spawnCount = this.#randomSpawnCount() * Math.max(1, ant.food.carriedAmount);
     queen.mealQueue.push({
       amount: ant.food.carriedAmount,
       payload: queuedPayload,
-      spawnCount,
+      sourceType: ant.food.carriedSourceType ?? "food",
+      spawnNutrition: ant.food.carriedSpawnNutrition ?? ant.food.carriedAmount,
     });
     simulationController.recordSeasonMealPayload(queuedPayload);
 

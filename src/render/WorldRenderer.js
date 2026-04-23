@@ -225,6 +225,7 @@ function formatScenarioDebug(simulation) {
     `corpse spent ${spentCorpses}`,
     `queen delivered ${simulation?.queen?.foodDelivered ?? 0}`,
     `queen food ${simulation?.queen?.foodReceived ?? 0}`,
+    `queen buffer ${formatScalar(simulation?.queen?.spawnNutritionBuffer ?? 0)}`,
     `queen meals ${simulation?.queen?.mealQueue?.length ?? 0}`,
     `queen queue ${simulation?.queen?.pendingSpawnQueue?.length ?? 0}`,
     `queen pool ${simulation?.queen?.pendingGenomePool?.length ?? 0}`,

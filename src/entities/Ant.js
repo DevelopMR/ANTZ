@@ -102,6 +102,9 @@ export class Ant {
     this.food = {
       carrying: false,
       carriedAmount: 0,
+      carriedSpawnNutrition: 0,
+      carriedRewardMultiplier: 1,
+      carriedSourceType: "none",
       sourceNodeId: null,
       carriedPayload: null,
       rewardPathPreview: null,
