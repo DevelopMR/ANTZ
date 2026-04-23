@@ -4,7 +4,7 @@
 
 This note is a restart-safe handoff for the current state of the ANTZ repository and the local developer workflow.
 
-Primary goals covered across this session:
+Primary goals covered across this session arc:
 - stabilize the local Codex + terminal toolchain
 - add repo-level workflow helpers and spellcheck
 - complete Phase 5 physics constraints and polish
@@ -12,14 +12,15 @@ Primary goals covered across this session:
 - complete Phase 7 food scent map
 - complete Phase 8 connection tree + rewards
 - complete Phase 9 queen / reproduction / season lifecycle
-- continue cleanly into Phase 10 traits + mutation work
+- continue through Phase 10 traits + mutation work
+- move into Phase 11 death / recycling implementation and tuning
 
 ## Project Snapshot
 
-- Repository: `d:devANTZ`
+- Repository: `d:\dev\ANTZ`
 - Project: browser-based 2D ant colony simulation with emergent structure building
 - Current documented phase: `Phase 11 - Death + Recycling In Progress`
-- Current working focus: `test the local queen spawn-yield reduction after the corpse loop became highly productive`
+- Current working focus: `test the newest queen throughput / reward tuning after corpse recycling became highly productive`
 
 Key design constraints still in effect:
 - keep simulation logic decoupled from rendering
@@ -67,9 +68,7 @@ Current verification state:
 - repo spellcheck passes
 - Phase 5 smoke suite passes
 - browser display controls for `Normal` / `No Display` / `Headless` / `Batch` are working
-- trait inheritance and selective mutation were verified before the temporary harness was removed
-- the aggressive upward-progress tuning pass is now live
-- syntax checks passed on the latest tuning, movement, lifecycle, and renderer edits
+- syntax checks passed on the latest tuning, lifecycle, food, and renderer edits
 
 ## Current Codebase State
 
@@ -93,125 +92,70 @@ Important current files and modules:
 - `src/render/AntView.js`
 - `src/render/AntSpriteLibrary.js`
 
-## Phase 10 Snapshot
+## Current Phase Snapshot
 
-Phase 10 is underway and no longer just planned.
+Phase 11 is underway and no longer just planned.
 
 Built during this phase so far:
-- selective mutation is active for half of fitness-clone offspring and half of season-pack offspring
-- inheritable traits now include forward drive, grasp drive, interaction drive, climb commitment, carry caution, grasp hold bias, stability bias, and support preference bias
-- connection-tree food genome packs now carry the full current trait set alongside compact brain snapshots
-- the first trait hooks are wired into attachment, food pickup, carrying, and climb targeting conservatively
-- temporary automated trait verification was run successfully and then removed as requested
-- browser observation controls now include `Normal`, `No Display`, `Headless`, and `Batch` modes
-- the HUD now shows the current season beside the `Ant Sim` title
-- the tracked-ant debug column now shows live `Fitness`
-- map object ordering was normalized so food is indexed from left to right and bottom to top, while walls and pegs are ordered left to right
-- the aggressive upward-progress tuning pass is now applied in `src/config/tuning.js`
-- fitness weights were later reset toward `meals = 40`, `delivery = 30`, `rewardContribution = 100`
-- horizontal ant travel was increased twice and now runs much faster than the earlier baseline
-- ants now track fall count and die after the configured maximum number of falls
+- explicit corpse lifecycle state/timing data on ants
+- `dead` and `decaying` visuals with readable black / green states
+- inert corpse support participation in attachment / movement / physics handling
+- corpse falling in some circumstances
+- corpse harvesting as recyclable food
+- corpse payloads showing in debug as `payload corpse`
+- corpse gene influence discounted/capped in connection-tree packing
+- no postmortem reward contribution
+- actual corpse cleanup after decay ends
+- queen meal nutrition buffering so corpse deliveries count as half a spawn unit
+- a small random queen-spawn chance during meal births
+- stronger normal map-food reward relative to corpse-food
 
-Current tuning direction has now been applied:
-- STRONG boost to connection-tree climber reward pressure
-- STRONG boost to direct food-delivery reproductive payoff
-- SMALL boost to survival / lifespan extension pressure
-- MODERATE boost to climbing willingness
-- MODERATE boost to grasp formation / persistence
-- MODERATE boost to selection pressure over random drift
+Current tuning direction:
+- keep death/recycling fun and legible
+- prevent corpse-heavy runs from turning into a perpetual ant machine
+- preserve a reason to pursue real map food instead of treating corpses as the whole economy
 
 Key live values now include:
-- `antCount = 50`
+- `antCount = 20`
+- `maxSpeed = 82`
 - `mealWeight = 40`
 - `foodDeliveryWeight = 30`
 - `rewardContributionWeight = 100`
-- `maxSpeed = 66.24`
-- `forwardDrive = 86.4`
+- `spawnOnFeedMin = 0`
+- `spawnOnFeedMax = 2`
+- `corpseSpawnNutritionValue = 0.5`
+- `normalFoodRewardMultiplier = 1.75`
+- `randomSpawnChance = 0.08`
+- `baseLifespanSeconds = 45`
 - `maxFallsBeforeDeath = 10`
-- `climbIntentThreshold = 0.14`
-- `randomShare = 0.3`, `fitnessCloneShare = 0.25`, `connectionTreeShare = 0.45`
-
-Intent behind this tuning pass:
-- make upward progress fun and visible now
-- push ants toward the third food deliberately rather than waiting for a long natural struggle
-- preserve the option to dial the system back later if the colony starts succeeding too easily
-
-Most recent in-browser observation:
-- ants are moving correctly
-- even well beyond `50` seasons, there was still not much visible learned or strategic behavior
-- the current question on reboot is less "do they move" and more "are the rewards and inheritance producing decisions"
 
 ## Notable Implementation Notes
 
-- The queen tracks delivered food, eaten food, meal queue, spawn queue, pending genome pool, and spawn history separately.
+- The queen now tracks delivered food, eaten food, meal queue, spawn queue, pending genome pool, spawn nutrition buffer, and spawn history separately.
 - Delivered food payloads are archived compactly for season-to-season reuse rather than storing a full colony replay.
-- Next-generation sourcing is split into random / fitness / season-pack buckets.
-- Mutation is live now, but intentionally mild.
+- Queen spawning from meals is no longer a direct `delivery -> full spawn count` relationship.
+- Corpse deliveries now add half a spawn unit, while full food still adds a full spawn unit.
+- Queen meal spawns can occasionally inject a fresh random ant instead of always drawing from a meal-derived contributor.
 - Renderer ant views rebuild when a season reset swaps in a fresh ant array.
-- `turnResponsiveness` was removed after review because it no longer affected runtime behavior and only added misleading trait complexity.
-- Future discovery-based optimization should treat static map order and dynamic dropped-food creation as separate concerns.
 
-## Warning Predictions For Later Analysis
+## Most Recent Observations
 
-These are worth keeping on record as we move forward:
-- current fitness scoring may still over-reward easy-food farming if third-food progress does not get enough extra pressure
-- much faster movement may create the appearance of activity without adding real competence
-- the 10-fall death rule may remove unstable but promising climbers too early
-- direct support-path credit may still miss important side-support contributors
-- the 40/20/40 generation split may need rebalancing once mutation pressure starts changing colony character
-- mutation strength that is too high could easily erase the tower / food behaviors already emerging
-- stronger temporary upward-progress tuning could solve this handcrafted map in a way that does not generalize
-- richer spawn-lineage debug may be needed once we start asking whether mutation and selection are fair
+- the sim now produces a fun corpse conveyor belt and a mass grave near the queen
+- ants visibly carry corpse-derived food on their backs
+- corpse cleanup is now real, so finished bodies leave the world
+- queen overproduction remains the main active tuning issue
+- the latest local tuning is meant to damp corpse-driven spawning and make normal food more rewarding than corpse-food
 
 ## Remaining Near-Term Work
 
 Most likely next step:
-- test the local `spawnOnFeedMin = 2` / `spawnOnFeedMax = 4` tuning in `src/config/tuning.js`
+- test the latest local queen throughput tuning in `src/config/tuning.js`
 
 Likely follow-ups after that:
 - decide whether queen meal throughput still needs further reduction under corpse-heavy runs
-- choose the next Phase 11 slice after the tuning test: corpse cleanup/removal or larger collapse spectacle
+- decide whether normal map food is now rewarded enough compared with corpse food
+- decide whether the random queen-spawn trickle is worth keeping or should be tuned again
 - keep watching whether the stronger death/recycling loop changes learning pressure in useful ways
-
-## Phase 11 Implementation Plan
-
-Agreed Phase 11 rules:
-- lifecycle flow is `alive -> dead -> decaying -> removed`
-- removed bodies are not kept as a persistent `gone` world state
-- corpses remain visible until the end of decay
-- dead and decaying ants are inert, support-capable exoskeletons with no brain activity and no further fitness gain
-- unsupported corpses topple or fall to a stable resting point
-- grasped corpses do not resist and can support normal structural load
-- a harvested corpse yields one food load total and behaves as a green food-unit style carry source
-- corpse-derived food keeps genome information and can add up to `20%` extra genetic influence under weight-based caps
-- dead and decaying ants may still participate in connection-tree genome packing, but at discounted influence
-- a future death-scent hook should use a power-curve falloff ending at zero by removal
-
-Planned implementation order:
-- `1.` add corpse lifecycle data to `Ant` and tune the new timers, caps, and scent constants
-- `2.` centralize death and corpse progression in the simulation lifecycle
-- `3.` preserve inert corpse falling, grasping, and structural support behavior
-- `4.` add corpse pickup and one-load recycling into the food loop
-- `5.` extend connection-tree genome packing with corpse-weight caps
-- `6.` add render readability for dead, decaying, spent, and removed transitions
-
-## Latest Phase 11 Snapshot
-
-Phase 11 slices completed so far:
-- corpse lifecycle state/timing data was added to `Ant` and central tuning
-- corpses now progress from `dead` to `decaying` with distinct visuals
-- corpses participate in physics/support handling as inert bodies
-- corpses can fall in some circumstances and still persist in-world
-- corpse harvesting works as a one-load green food return to the queen
-- corpse payloads show in debug as `payload corpse`
-- corpse-weighted genome influence is discounted/capped
-- dead/decaying ants no longer gain postmortem reward contribution
-
-Most recent observed behavior:
-- the sim now produces a fun corpse conveyor belt and a mass grave near the queen
-- ants visibly carry corpse-derived food on their backs
-- the death/recycling loop is now highly productive
-- queen meal volume became too high, so spawn yield was reduced locally from `3-8` to `2-4` per food unit and still needs testing
 
 ## Session Close Summary
 
@@ -223,15 +167,16 @@ Built or completed:
 - Phase 7 food scent map with wind drift
 - Phase 8 connection tree + rewards with packed food genomes and queued spawning
 - Phase 9 queen / reproduction / season lifecycle with death and rollover
-- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, tracked-ant fitness HUD, map learning-order cleanup, per-ant fall-death rule, faster locomotion tuning, and aggressive upward-progress tuning
+- Phase 10 mutation activation, first inheritable trait pass, browser speed controls, tracked-ant fitness HUD, per-ant fall-death rule, and faster locomotion tuning
+- Phase 11 corpse lifecycle, corpse harvesting, corpse genome contribution, corpse cleanup, and queen nutrition-buffer tuning
 
 Assumptions made:
 - compact season payload archives are preferable to storing full colony histories
 - mutation should start mild rather than dramatic
-- a dedicated dead sprite is better than special render rotation logic
-- strong temporary tuning is acceptable if it helps bootstrap upward progress and can later be dialed back
+- a dedicated dead / decaying sprite is better than special render rotation logic
+- strong temporary tuning is acceptable if it helps bootstrap readable behavior and can later be dialed back
 
 Remaining next:
-- observe whether ants show visible learned behavior at all after long runs
-- record whether faster locomotion and fall-death pressure help or hurt emergence
-- decide later which reward and movement dials should remain and which should be softened or redirected
+- decide whether the current queen tuning finally slows runaway reproduction enough
+- decide whether normal map food now has enough advantage over corpse food
+- decide whether `randomSpawnChance = 0.08` is worth keeping
